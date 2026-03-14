@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
+    private var twoLineStatusView: NSStackView?
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
 
@@ -86,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch mode {
         case .compact:
             statusItem.length = NSStatusItem.variableLength
+            removeTwoLineStatusView()
             button.attributedTitle = NSAttributedString(
                 string: "C \(cpuText) M \(memoryText)",
                 attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)]
@@ -93,17 +95,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = nil
         case .twoLine:
             statusItem.length = 54
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.alignment = .center
-            button.attributedTitle = NSAttributedString(
-                string: "C \(cpuText)\nM \(memoryText)",
-                attributes: [
-                    .font: NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold),
-                    .paragraphStyle: paragraph
-                ]
-            )
+            button.attributedTitle = NSAttributedString(string: "")
             button.image = nil
-            button.frame = NSRect(x: 0, y: 0, width: 54, height: button.frame.height)
+            installTwoLineStatusView(cpuText: cpuText, memoryText: memoryText, in: button)
         case .off:
             break
         }
@@ -114,6 +108,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let visibleWindows = NSApplication.shared.windows.filter { !$0.isMiniaturized && $0.canBecomeKey }
         if visibleWindows.isEmpty {
             WindowRouter.shared.openMainWindow?()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                NSApp.activate(ignoringOtherApps: true)
+                for window in NSApplication.shared.windows {
+                    window.makeKeyAndOrderFront(nil)
+                }
+            }
         }
         for window in NSApplication.shared.windows {
             window.makeKeyAndOrderFront(nil)
@@ -127,5 +127,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+
+    private func installTwoLineStatusView(cpuText: String, memoryText: String, in button: NSStatusBarButton) {
+        let stack: NSStackView
+        let cpuLabel: NSTextField
+        let memoryLabel: NSTextField
+
+        if
+            let existing = twoLineStatusView,
+            let first = existing.views.first as? NSTextField,
+            let second = existing.views.last as? NSTextField
+        {
+            stack = existing
+            cpuLabel = first
+            memoryLabel = second
+        } else {
+            let first = NSTextField(labelWithString: "")
+            let second = NSTextField(labelWithString: "")
+            [first, second].forEach {
+                $0.alignment = .center
+                $0.font = NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)
+                $0.textColor = NSColor.labelColor
+                $0.backgroundColor = .clear
+                $0.isBordered = false
+                $0.isEditable = false
+                $0.translatesAutoresizingMaskIntoConstraints = false
+            }
+
+            let created = NSStackView(views: [first, second])
+            created.orientation = .vertical
+            created.alignment = .centerX
+            created.distribution = .fillEqually
+            created.spacing = -1
+            created.translatesAutoresizingMaskIntoConstraints = false
+
+            button.addSubview(created)
+            NSLayoutConstraint.activate([
+                created.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+                created.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+                created.widthAnchor.constraint(equalToConstant: 42)
+            ])
+            twoLineStatusView = created
+            stack = created
+            cpuLabel = first
+            memoryLabel = second
+        }
+
+        cpuLabel.stringValue = "C \(cpuText)"
+        memoryLabel.stringValue = "M \(memoryText)"
+        stack.isHidden = false
+    }
+
+    private func removeTwoLineStatusView() {
+        twoLineStatusView?.removeFromSuperview()
+        twoLineStatusView = nil
     }
 }
