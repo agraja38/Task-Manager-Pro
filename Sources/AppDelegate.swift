@@ -108,6 +108,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
+        let visibleWindows = NSApplication.shared.windows.filter { !$0.isMiniaturized && $0.canBecomeKey }
+        if visibleWindows.isEmpty {
+            WindowRouter.shared.openMainWindow?()
+        }
         for window in NSApplication.shared.windows {
             window.makeKeyAndOrderFront(nil)
         }

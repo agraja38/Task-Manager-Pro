@@ -153,36 +153,17 @@ struct ProcessRow: View {
     let process: ProcessSnapshot
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             ProcessAppIconView(process: process)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(process.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(process.bundleIdentifier.isEmpty ? process.executablePath : process.bundleIdentifier)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            Text(process.name)
+                .font(.headline)
+                .lineLimit(1)
 
-            Spacer(minLength: 12)
-
-            ResourcePill(title: "CPU", value: cpuValueText, tint: .orange)
-            ResourcePill(title: "Memory", value: String(format: "%.0f MB", process.memoryMB), tint: .blue)
-
-            Menu {
-                Button("Quit") { appState.execute(.quit, for: process) }
-                Button("Terminate") { appState.execute(.terminate, for: process) }
-                Button("Force Quit") { appState.execute(.forceQuit, for: process) }
-            } label: {
-                Label("Actions", systemImage: "ellipsis.circle")
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
         .background(backgroundFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -203,13 +184,6 @@ struct ProcessRow: View {
         }
         return Color.white.opacity(0.04)
     }
-
-    private var cpuValueText: String {
-        if process.cpuUsage < 1 {
-            return String(format: "%.2f%%", process.cpuUsage)
-        }
-        return String(format: "%.1f%%", process.cpuUsage)
-    }
 }
 
 struct ProcessAppIconView: View {
@@ -221,8 +195,8 @@ struct ProcessAppIconView: View {
         Image(nsImage: icon)
             .resizable()
             .interpolation(.high)
-            .frame(width: 22, height: 22)
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .frame(width: 28, height: 28)
+            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 
     private var icon: NSImage {
@@ -232,7 +206,7 @@ struct ProcessAppIconView: View {
         }
 
         let image = NSWorkspace.shared.icon(forFile: key)
-        image.size = NSSize(width: 22, height: 22)
+        image.size = NSSize(width: 28, height: 28)
         Self.cache[key] = image
         return image
     }
@@ -242,27 +216,6 @@ struct ProcessAppIconView: View {
             return String(process.executablePath[..<appRange.lowerBound]) + ".app"
         }
         return process.executablePath.isEmpty ? "/Applications" : process.executablePath
-    }
-}
-
-struct ResourcePill: View {
-    let title: String
-    let value: String
-    let tint: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.subheadline.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.primary)
-        }
-        .frame(width: 96, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -368,8 +321,6 @@ struct SettingsView: View {
 
                 GroupBox("Updater") {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Task Manager Pro checks a GitHub-hosted JSON feed, shows the available version and download size, and installs only when you choose to continue.")
-                            .foregroundStyle(.secondary)
                         HStack(spacing: 12) {
                             Button("Check for Updates Now") { appState.startUpdateFlow() }
                             if appState.updater.phase == .ready {

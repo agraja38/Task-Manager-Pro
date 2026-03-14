@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.14"
-BUILD_NUMBER="114"
+VERSION="1.0.15"
+BUILD_NUMBER="115"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.14",
-  "build": 114,
-  "notes": "Add Dock icon and appearance settings, remove manual refresh and extra sort/filter options, and show real app icons in the process list.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.14/TaskManagerPro-1.0.14-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.14/TaskManagerPro-1.0.14-intel.dmg"
+  "version": "1.0.15",
+  "build": 115,
+  "notes": "Simplify the process list to icon and name only, remove extra updater helper text, and fix reopening the main window from the menu bar after it has been closed.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.15/TaskManagerPro-1.0.15-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.15/TaskManagerPro-1.0.15-intel.dmg"
 }
 JSON
 
