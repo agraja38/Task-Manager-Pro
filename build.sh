@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.19"
-BUILD_NUMBER="119"
+VERSION="1.0.20"
+BUILD_NUMBER="120"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.19",
-  "build": 119,
-  "notes": "Use a centered stacked menu bar view for the two-line monitor layout and improve reopening the main window from the menu bar.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.19/TaskManagerPro-1.0.19-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.19/TaskManagerPro-1.0.19-intel.dmg"
+  "version": "1.0.20",
+  "build": 120,
+  "notes": "Keep the main window alive when closed so the menu bar can reopen it reliably, while preserving the centered two-line menu bar monitor layout.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.20/TaskManagerPro-1.0.20-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.20/TaskManagerPro-1.0.20-intel.dmg"
 }
 JSON
 

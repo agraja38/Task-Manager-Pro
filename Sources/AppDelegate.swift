@@ -1,15 +1,22 @@
 import AppKit
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var twoLineStatusView: NSStackView?
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
+    private weak var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyActivationPolicy()
         applyMenuBarMode()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWindowDidBecomeMain(_:)),
+            name: NSWindow.didBecomeMainNotification,
+            object: nil
+        )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleMetricsUpdate(_:)),
@@ -38,6 +45,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleMenuBarPreferenceChange(_ notification: Notification) {
         applyMenuBarMode()
+    }
+
+    @objc private func handleWindowDidBecomeMain(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, !isSettingsWindow(window) else { return }
+        mainWindow = window
+        window.delegate = self
     }
 
     @objc private func handlePresentationPreferenceChange(_ notification: Notification) {
@@ -105,18 +118,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        let visibleWindows = NSApplication.shared.windows.filter { !$0.isMiniaturized && $0.canBecomeKey }
-        if visibleWindows.isEmpty {
-            WindowRouter.shared.openMainWindow?()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                NSApp.activate(ignoringOtherApps: true)
-                for window in NSApplication.shared.windows {
-                    window.makeKeyAndOrderFront(nil)
-                }
-            }
+        if let mainWindow {
+            mainWindow.makeKeyAndOrderFront(nil)
+            return
         }
-        for window in NSApplication.shared.windows {
-            window.makeKeyAndOrderFront(nil)
+
+        WindowRouter.shared.openMainWindow?()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            NSApp.activate(ignoringOtherApps: true)
+            self.mainWindow?.makeKeyAndOrderFront(nil)
+            for window in NSApplication.shared.windows where !self.isSettingsWindow(window) {
+                self.mainWindow = window
+                window.delegate = self
+                window.makeKeyAndOrderFront(nil)
+                break
+            }
         }
     }
 
@@ -182,5 +198,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func removeTwoLineStatusView() {
         twoLineStatusView?.removeFromSuperview()
         twoLineStatusView = nil
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard !isSettingsWindow(sender) else { return true }
+        sender.orderOut(nil)
+        return false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openMainWindow()
+        return false
+    }
+
+    private func isSettingsWindow(_ window: NSWindow) -> Bool {
+        window.title.localizedCaseInsensitiveContains("settings")
     }
 }
