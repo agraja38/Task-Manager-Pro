@@ -11,30 +11,24 @@ final class ProcessMonitorService {
     }()
 
     func fetchProcesses(appMetadataByPID: [Int32: RunningAppMetadata]) -> [ProcessSnapshot] {
-        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,%cpu=,rss=,state=,lstart=,command="])
+        let metadataByPID = fetchProcessMetadata()
+        let liveStatsByPID = fetchLiveActivityStats()
         var provisional: [Int32: ProcessSnapshot] = [:]
         var childrenByParent: [Int32: [Int32]] = [:]
 
-        for line in output.split(separator: "\n") {
-            let fields = line.split(maxSplits: 11, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard fields.count >= 12 else { continue }
-            guard
-                let pid = Int32(fields[0]),
-                let ppid = Int32(fields[1]),
-                let cpu = Double(fields[3])
-            else { continue }
-
-            let user = String(fields[2])
-            let memoryKB = Double(fields[4]) ?? 0
-            let stateCode = String(fields[5])
-            let dateString = [fields[6], fields[7], fields[8], fields[9], fields[10]].map(String.init).joined(separator: " ")
-            let executablePath = String(fields[11])
+        for (pid, metadata) in metadataByPID {
+            let live = liveStatsByPID[pid]
+            let ppid = metadata.ppid
+            let cpu = live?.cpuUsage ?? 0
+            let user = live?.user ?? metadata.user
+            let memoryMB = live?.memoryMB ?? metadata.memoryMB
+            let stateCode = live?.stateCode ?? metadata.stateCode
+            let executablePath = metadata.executablePath
             let app = appMetadataByPID[pid]
             let bundleID = app?.bundleIdentifier ?? ""
             let appName = app?.localizedName ?? URL(fileURLWithPath: executablePath).lastPathComponent
-            let launchDate = dateFormatter.date(from: dateString)
+            let launchDate = metadata.launchDate
             let status = statusLabel(for: stateCode, app: app)
-            let memoryMB = memoryKB / 1024
             let energy = min(100, cpu * 0.65 + (memoryMB / 1024) * 24 + (app != nil ? 6 : 0))
             let critical = isCriticalProcess(pid: pid, name: appName, bundleID: bundleID, path: executablePath)
             let metadata = [
@@ -97,6 +91,60 @@ final class ProcessMonitorService {
         return provisional.values.sorted { $0.cpuUsage > $1.cpuUsage }
     }
 
+    private func fetchProcessMetadata() -> [Int32: ProcessMetadata] {
+        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,rss=,state=,lstart=,command="], timeout: 10)
+        var results: [Int32: ProcessMetadata] = [:]
+
+        for line in output.split(separator: "\n") {
+            let fields = line.split(maxSplits: 10, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
+            guard fields.count >= 11 else { continue }
+            guard
+                let pid = Int32(fields[0]),
+                let ppid = Int32(fields[1])
+            else { continue }
+
+            let user = String(fields[2])
+            let memoryMB = (Double(fields[3]) ?? 0) / 1024
+            let stateCode = String(fields[4])
+            let dateString = [fields[5], fields[6], fields[7], fields[8], fields[9]].map(String.init).joined(separator: " ")
+            let executablePath = String(fields[10])
+
+            results[pid] = ProcessMetadata(
+                pid: pid,
+                ppid: ppid,
+                user: user,
+                memoryMB: memoryMB,
+                stateCode: stateCode,
+                launchDate: dateFormatter.date(from: dateString),
+                executablePath: executablePath
+            )
+        }
+
+        return results
+    }
+
+    private func fetchLiveActivityStats() -> [Int32: LiveActivityStat] {
+        let output = Shell.run("/usr/bin/top", arguments: ["-l", "1", "-o", "cpu", "-stats", "pid,command,cpu,mem,state,user"], timeout: 10)
+        var results: [Int32: LiveActivityStat] = [:]
+
+        for line in output.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard let firstToken = trimmed.split(separator: " ").first, Int32(firstToken) != nil else { continue }
+
+            let fields = trimmed.split(maxSplits: 5, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
+            guard fields.count >= 6, let pid = Int32(fields[0]) else { continue }
+
+            results[pid] = LiveActivityStat(
+                cpuUsage: Double(fields[2].replacingOccurrences(of: "%", with: "")) ?? 0,
+                memoryMB: parseMemoryToMB(String(fields[3])),
+                stateCode: String(fields[4]),
+                user: String(fields[5])
+            )
+        }
+
+        return results
+    }
+
     func perform(_ action: ProcessAction, on process: ProcessSnapshot) throws {
         guard !process.isCritical else {
             throw NSError(domain: "TaskManagerPro", code: 1, userInfo: [NSLocalizedDescriptionKey: "Task Manager Pro blocked the action because this looks like a critical macOS process."])
@@ -156,4 +204,30 @@ final class ProcessMonitorService {
         if fileInfo.localizedCaseInsensitiveContains("arm64") { return "Apple Silicon / Native" }
         return "Unknown"
     }
+
+    private func parseMemoryToMB(_ value: String) -> Double {
+        let cleaned = value.uppercased()
+        if cleaned.hasSuffix("G"), let number = Double(cleaned.dropLast()) { return number * 1024 }
+        if cleaned.hasSuffix("M"), let number = Double(cleaned.dropLast()) { return number }
+        if cleaned.hasSuffix("K"), let number = Double(cleaned.dropLast()) { return number / 1024 }
+        if cleaned.hasSuffix("B"), let number = Double(cleaned.dropLast()) { return number / 1_048_576 }
+        return Double(cleaned) ?? 0
+    }
+}
+
+private struct ProcessMetadata {
+    let pid: Int32
+    let ppid: Int32
+    let user: String
+    let memoryMB: Double
+    let stateCode: String
+    let launchDate: Date?
+    let executablePath: String
+}
+
+private struct LiveActivityStat {
+    let cpuUsage: Double
+    let memoryMB: Double
+    let stateCode: String
+    let user: String
 }

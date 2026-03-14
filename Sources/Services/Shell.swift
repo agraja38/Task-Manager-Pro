@@ -13,18 +13,28 @@ enum Shell {
         process.standardError = errorPipe
 
         do {
+            var outputData = Data()
+            let outputHandle = outputPipe.fileHandleForReading
+            outputHandle.readabilityHandler = { handle in
+                let chunk = handle.availableData
+                if !chunk.isEmpty {
+                    outputData.append(chunk)
+                }
+            }
+
             try process.run()
             let deadline = Date().addingTimeInterval(timeout)
             while process.isRunning && Date() < deadline {
                 RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
             }
+            outputHandle.readabilityHandler = nil
             if process.isRunning {
                 process.terminate()
                 process.waitUntilExit()
                 return ""
             }
-            let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8) ?? ""
+            outputData.append(outputHandle.readDataToEndOfFile())
+            return String(data: outputData, encoding: .utf8) ?? ""
         } catch {
             return ""
         }
