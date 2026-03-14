@@ -73,6 +73,7 @@ struct RunningAppMetadata: Hashable {
     let pid: Int32
     let localizedName: String
     let bundleIdentifier: String
+    let executablePath: String
     let isActive: Bool
     let isFinishedLaunching: Bool
     let isRegularApp: Bool

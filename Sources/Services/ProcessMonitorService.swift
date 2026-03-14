@@ -23,10 +23,10 @@ final class ProcessMonitorService {
             let user = live?.user ?? metadata.user
             let memoryMB = live?.memoryMB ?? metadata.memoryMB
             let stateCode = live?.stateCode ?? metadata.stateCode
-            let executablePath = metadata.executablePath
             let app = appMetadataByPID[pid]
+            let executablePath = (app?.executablePath.isEmpty == false ? app?.executablePath : nil) ?? metadata.executablePath
             let bundleID = app?.bundleIdentifier ?? ""
-            let appName = app?.localizedName ?? URL(fileURLWithPath: executablePath).lastPathComponent
+            let appName = preferredName(app: app, executablePath: executablePath)
             let launchDate = metadata.launchDate
             let status = statusLabel(for: stateCode, app: app)
             let energy = min(100, cpu * 0.65 + (memoryMB / 1024) * 24 + (app != nil ? 6 : 0))
@@ -35,7 +35,7 @@ final class ProcessMonitorService {
                 "Executable": executablePath,
                 "Bundle ID": bundleID.isEmpty ? "Not available" : bundleID,
                 "Elapsed": elapsedString(from: launchDate),
-                "Architecture": app?.architecture ?? architectureForExecutable(at: executablePath),
+                "Architecture": app?.architecture ?? "Unknown",
                 "Launch Type": app?.isRegularApp == true ? "Regular app" : "Background or daemon"
             ]
 
@@ -92,7 +92,7 @@ final class ProcessMonitorService {
     }
 
     private func fetchProcessMetadata() -> [Int32: ProcessMetadata] {
-        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,rss=,state=,lstart=,command="], timeout: 10)
+        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,rss=,state=,lstart=,comm="], timeout: 10)
         var results: [Int32: ProcessMetadata] = [:]
 
         for line in output.split(separator: "\n") {
@@ -198,13 +198,6 @@ final class ProcessMonitorService {
         return path.hasPrefix("/System/Library") || path.hasPrefix("/usr/libexec")
     }
 
-    private func architectureForExecutable(at path: String) -> String {
-        let fileInfo = Shell.run("/usr/bin/file", arguments: [path], timeout: 2)
-        if fileInfo.localizedCaseInsensitiveContains("x86_64") { return "Intel" }
-        if fileInfo.localizedCaseInsensitiveContains("arm64") { return "Apple Silicon / Native" }
-        return "Unknown"
-    }
-
     private func parseMemoryToMB(_ value: String) -> Double {
         let cleaned = value.uppercased()
         if cleaned.hasSuffix("G"), let number = Double(cleaned.dropLast()) { return number * 1024 }
@@ -212,6 +205,15 @@ final class ProcessMonitorService {
         if cleaned.hasSuffix("K"), let number = Double(cleaned.dropLast()) { return number / 1024 }
         if cleaned.hasSuffix("B"), let number = Double(cleaned.dropLast()) { return number / 1_048_576 }
         return Double(cleaned) ?? 0
+    }
+
+    private func preferredName(app: RunningAppMetadata?, executablePath: String) -> String {
+        if let appName = app?.localizedName, !appName.isEmpty {
+            return appName
+        }
+
+        let candidate = executablePath.split(separator: "/").last.map(String.init) ?? executablePath
+        return candidate.isEmpty ? "Unknown Process" : candidate
     }
 }
 

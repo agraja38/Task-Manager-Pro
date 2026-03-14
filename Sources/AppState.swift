@@ -99,6 +99,7 @@ final class AppState: ObservableObject {
                     pid: app.processIdentifier,
                     localizedName: app.localizedName ?? "",
                     bundleIdentifier: app.bundleIdentifier ?? "",
+                    executablePath: app.executableURL?.path ?? "",
                     isActive: app.isActive,
                     isFinishedLaunching: app.isFinishedLaunching,
                     isRegularApp: app.activationPolicy == .regular,
