@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.04"
-BUILD_NUMBER="104"
+VERSION="1.0.05"
+BUILD_NUMBER="105"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.04",
-  "build": 104,
-  "notes": "Fix app bundle signing so the drag-and-drop DMG builds open correctly after download.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.04/TaskManagerPro-1.0.04-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.04/TaskManagerPro-1.0.04-intel.dmg"
+  "version": "1.0.05",
+  "build": 105,
+  "notes": "Fix refresh hangs so processes, performance stats, and startup information load even when macOS blocks login-item automation.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.05/TaskManagerPro-1.0.05-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.05/TaskManagerPro-1.0.05-intel.dmg"
 }
 JSON
 

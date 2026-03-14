@@ -101,11 +101,9 @@ final class AppState: ObservableObject {
         Task.detached(priority: .userInitiated) {
             let processes = processService.fetchProcesses(runningApplications: runningApps)
             let metrics = metricsService.sample()
-            let startupItems = startupService.fetchStartupItems()
 
             await MainActor.run {
                 self.processes = processes
-                self.startupItems = startupItems
                 self.currentMetrics = metrics
                 self.appendHistory(snapshot: metrics, processes: processes)
                 self.raiseAlertsIfNeeded(processes: processes, metrics: metrics)
@@ -120,6 +118,13 @@ final class AppState: ObservableObject {
 
                 let summary = String(format: "CPU %2.0f%%  MEM %2.0f%%", metrics.cpuPercent, metrics.memoryPercent)
                 NotificationCenter.default.post(name: .pulseTaskMetricsDidUpdate, object: nil, userInfo: ["summary": summary])
+            }
+        }
+
+        Task.detached(priority: .utility) {
+            let startupItems = startupService.fetchStartupItems()
+            await MainActor.run {
+                self.startupItems = startupItems
             }
         }
     }

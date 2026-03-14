@@ -17,7 +17,7 @@ final class StartupItemsService {
         end tell
         """
 
-        let output = Shell.run("/usr/bin/osascript", arguments: ["-e", script])
+        let output = Shell.run("/usr/bin/osascript", arguments: ["-e", script], timeout: 2)
         let rows = output
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -27,7 +27,7 @@ final class StartupItemsService {
             return [
                 StartupItem(
                     name: "Login items unavailable",
-                    path: "Grant Automation access to System Events or use Advanced mode to inspect background tasks another way.",
+                    path: "Grant Automation access to System Events in macOS Settings to inspect login items here.",
                     isHidden: false,
                     impact: "Unknown",
                     source: "Fallback"
