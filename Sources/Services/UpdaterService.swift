@@ -15,9 +15,9 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.06"
+    @Published var latestVersion = "1.0.07"
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.06"
+    @Published var currentVersion = "1.0.07"
 
     private let feedURL = URL(string: "https://raw.githubusercontent.com/agraja38/Task-Manager-Pro/main/docs/update.json")!
 
@@ -72,14 +72,15 @@ final class UpdaterService: ObservableObject {
         }
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         let (localURL, _) = try await session.download(from: url)
+        let namedURL = try prepareDownloadedDiskImage(from: localURL, sourceURL: url)
 
         phase = .installing
         progress = 0.9
-        statusText = "Opening installer..."
-        NSWorkspace.shared.open(localURL)
+        statusText = "Opening disk image..."
+        NSWorkspace.shared.open(namedURL)
         progress = 1
         phase = .finished
-        statusText = "Installer opened. Follow the macOS prompts to replace the app."
+        statusText = "Disk image opened. Drag Task Manager Pro into Applications to finish updating."
     }
 
     private func currentDownloadURL(from feed: UpdateFeed) -> String {
@@ -88,6 +89,20 @@ final class UpdaterService: ObservableObject {
         #else
         return feed.x86_64AssetURL
         #endif
+    }
+
+    private func prepareDownloadedDiskImage(from temporaryURL: URL, sourceURL: URL) throws -> URL {
+        let downloadsFolder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let fileName = sourceURL.lastPathComponent.isEmpty ? "TaskManagerPro-Update.dmg" : sourceURL.lastPathComponent
+        let destinationURL = downloadsFolder.appendingPathComponent(fileName)
+
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+        }
+
+        try FileManager.default.copyItem(at: temporaryURL, to: destinationURL)
+        return destinationURL
     }
 }
 

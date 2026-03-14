@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.06"
-BUILD_NUMBER="106"
+VERSION="1.0.07"
+BUILD_NUMBER="107"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.06",
-  "build": 106,
-  "notes": "Fix the Processes tab, fit the Performance dashboard without scrolling, and replace the update popup with inline status text.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.06/TaskManagerPro-1.0.06-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.06/TaskManagerPro-1.0.06-intel.dmg"
+  "version": "1.0.07",
+  "build": 107,
+  "notes": "Fix the updater so downloaded DMGs are saved with the correct filename and open normally from the update flow.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.07/TaskManagerPro-1.0.07-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.07/TaskManagerPro-1.0.07-intel.dmg"
 }
 JSON
 
