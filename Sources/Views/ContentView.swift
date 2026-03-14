@@ -66,11 +66,7 @@ struct ProcessesView: View {
     var body: some View {
         VStack(spacing: 16) {
             header
-            if appState.treeViewEnabled {
-                ProcessTreeList(processes: appState.filteredProcesses)
-            } else {
-                ProcessTable(processes: appState.filteredProcesses)
-            }
+            ProcessTable(processes: appState.filteredProcesses)
             footer
         }
         .padding(20)
@@ -108,13 +104,6 @@ struct ProcessesView: View {
                     }
                 }
                 .frame(width: 140)
-
-                HStack(spacing: 8) {
-                    Text("Tree")
-                    Toggle("", isOn: $appState.treeViewEnabled)
-                        .labelsHidden()
-                }
-                .fixedSize()
             }
         }
     }
@@ -148,49 +137,6 @@ struct ProcessTable: View {
                 }
             }
         }
-    }
-}
-
-struct ProcessTreeList: View {
-    @EnvironmentObject private var appState: AppState
-    let processes: [ProcessSnapshot]
-
-    private var rootProcesses: [ProcessSnapshot] {
-        let ids = Set(processes.map(\.pid))
-        return processes.filter { !ids.contains($0.ppid) }.sorted { $0.cpuUsage > $1.cpuUsage }
-    }
-
-    var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
-                ForEach(rootProcesses, id: \.pid) { root in
-                    ProcessBranch(process: root, allProcesses: processes)
-                }
-            }
-        }
-    }
-}
-
-struct ProcessBranch: View {
-    @EnvironmentObject private var appState: AppState
-    let process: ProcessSnapshot
-    let allProcesses: [ProcessSnapshot]
-
-    private var children: [ProcessSnapshot] {
-        allProcesses.filter { $0.ppid == process.pid }.sorted { $0.cpuUsage > $1.cpuUsage }
-    }
-
-    var body: some View {
-        DisclosureGroup {
-            ForEach(children, id: \.pid) { child in
-                ProcessBranch(process: child, allProcesses: allProcesses)
-            }
-        } label: {
-            ProcessRow(process: process)
-                .contentShape(Rectangle())
-                .onTapGesture { appState.selectedPID = process.pid }
-        }
-        .padding(.leading, 12)
     }
 }
 
@@ -334,7 +280,8 @@ struct SettingsView: View {
 
                 GroupBox("Experience") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Enable process tree by default", isOn: $appState.treeViewEnabled)
+                        Text("Task Manager Pro keeps the interface focused on a fast app list and a live performance dashboard.")
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
                 }
@@ -359,11 +306,14 @@ struct SettingsView: View {
 
                 GroupBox("Updater") {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Task Manager Pro includes a built-in updater that checks a GitHub-hosted JSON feed, downloads the latest build, and shows progress while downloading and opening the installer.")
+                        Text("Task Manager Pro checks a GitHub-hosted JSON feed, shows the available version and download size, and installs only when you choose to continue.")
                             .foregroundStyle(.secondary)
                         HStack(spacing: 12) {
                             Button("Check for Updates Now") { appState.startUpdateFlow() }
-                            Text(appState.updater.statusText)
+                            if appState.updater.phase == .ready {
+                                Button("Install Now") { appState.installAvailableUpdate() }
+                            }
+                            Text(appState.updater.updateSummaryText)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)

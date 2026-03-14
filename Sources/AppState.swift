@@ -9,7 +9,6 @@ final class AppState: ObservableObject {
     @Published var processFilter: ProcessFilter = .appsOnly
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
-    @Published var treeViewEnabled = false
     @Published var selectedPID: Int32?
     @Published var processes: [ProcessSnapshot] = []
     @Published var alerts: [AlertItem] = []
@@ -150,6 +149,10 @@ final class AppState: ObservableObject {
 
     func startUpdateFlow() {
         Task { await updater.checkForUpdates() }
+    }
+
+    func installAvailableUpdate() {
+        Task { await updater.installPreparedUpdate() }
     }
 
     private func startTimers() {

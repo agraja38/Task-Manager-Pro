@@ -19,7 +19,7 @@ final class ProcessMonitorService {
         for (pid, metadata) in metadataByPID {
             let live = liveStatsByPID[pid]
             let ppid = metadata.ppid
-            let cpu = live?.cpuUsage ?? metadata.cpuUsage
+            let cpu = max(live?.cpuUsage ?? 0, metadata.cpuUsage)
             let user = live?.user ?? metadata.user
             let memoryMB = live?.memoryMB ?? metadata.memoryMB
             let stateCode = live?.stateCode ?? metadata.stateCode

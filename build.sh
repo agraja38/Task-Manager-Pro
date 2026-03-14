@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.11"
-BUILD_NUMBER="111"
+VERSION="1.0.12"
+BUILD_NUMBER="112"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.11",
-  "build": 111,
-  "notes": "Show live app CPU values more reliably, move navigation to a compact top tab bar, and remove the old Startup Apps and Details sections.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.11/TaskManagerPro-1.0.11-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.11/TaskManagerPro-1.0.11-intel.dmg"
+  "version": "1.0.12",
+  "build": 112,
+  "notes": "Remove the tree view completely, improve CPU percentages by combining live and rolling samples, and make updates install only after explicit confirmation.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.12/TaskManagerPro-1.0.12-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.12/TaskManagerPro-1.0.12-intel.dmg"
 }
 JSON
 

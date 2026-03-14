@@ -6,6 +6,7 @@ final class UpdaterService: ObservableObject {
     enum UpdatePhase: String {
         case idle
         case checking
+        case ready
         case downloading
         case installing
         case finished
@@ -15,9 +16,11 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.11"
+    @Published var latestVersion = "1.0.12"
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.11"
+    @Published var currentVersion = "1.0.12"
+    @Published var pendingAssetURL: String?
+    @Published var pendingDownloadSizeBytes: Int64?
 
     private let feedURL = URL(string: "https://raw.githubusercontent.com/agraja38/Task-Manager-Pro/main/docs/update.json")!
 
@@ -26,6 +29,8 @@ final class UpdaterService: ObservableObject {
         progress = 0.1
         statusText = "Checking for updates..."
         releaseNotes = ""
+        pendingAssetURL = nil
+        pendingDownloadSizeBytes = nil
 
         do {
             let configuration = URLSessionConfiguration.ephemeral
@@ -48,11 +53,27 @@ final class UpdaterService: ObservableObject {
             }
 
             let assetURL = currentDownloadURL(from: feed)
-            try await downloadAndInstall(from: assetURL)
+            pendingAssetURL = assetURL
+            pendingDownloadSizeBytes = try await fetchDownloadSize(from: assetURL)
+            phase = .ready
+            progress = 0
+            statusText = "Version \(feed.version) is ready to install."
         } catch {
             phase = .failed
             progress = 0
             statusText = "Update check failed: \(error.localizedDescription)"
+        }
+    }
+
+    func installPreparedUpdate() async {
+        guard let assetURL = pendingAssetURL else { return }
+
+        do {
+            try await downloadAndInstall(from: assetURL)
+        } catch {
+            phase = .failed
+            progress = 0
+            statusText = "Install failed: \(error.localizedDescription)"
         }
     }
 
@@ -91,6 +112,33 @@ final class UpdaterService: ObservableObject {
         #else
         return feed.x86_64AssetURL
         #endif
+    }
+
+    private func fetchDownloadSize(from assetURLString: String) async throws -> Int64? {
+        guard let url = URL(string: assetURLString) else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "HEAD"
+        let (data, response) = try await URLSession.shared.data(for: request)
+        _ = data
+
+        if let http = response as? HTTPURLResponse, !(200...399).contains(http.statusCode) {
+            throw NSError(domain: "TaskManagerPro", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "The update download responded with HTTP \(http.statusCode)."])
+        }
+
+        if response.expectedContentLength > 0 {
+            return response.expectedContentLength
+        }
+
+        if
+            let http = response as? HTTPURLResponse,
+            let contentLength = http.value(forHTTPHeaderField: "Content-Length"),
+            let bytes = Int64(contentLength)
+        {
+            return bytes
+        }
+
+        return nil
     }
 
     private func prepareDownloadedDiskImage(from temporaryURL: URL, sourceURL: URL) throws -> URL {
@@ -190,6 +238,19 @@ final class UpdaterService: ObservableObject {
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
         return scriptURL
+    }
+
+    var updateSummaryText: String {
+        guard phase == .ready else { return statusText }
+
+        if let bytes = pendingDownloadSizeBytes {
+            let formatter = ByteCountFormatter()
+            formatter.allowedUnits = [.useMB]
+            formatter.countStyle = .file
+            return "Version \(latestVersion) available • \(formatter.string(fromByteCount: bytes))"
+        }
+
+        return "Version \(latestVersion) available"
     }
 }
 
