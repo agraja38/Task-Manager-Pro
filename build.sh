@@ -5,20 +5,26 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.03"
-BUILD_NUMBER="103"
-ARM_BIN="$DIST_DIR/${APP_NAME}-arm64"
-X64_BIN="$DIST_DIR/${APP_NAME}-x86_64"
+VERSION="1.0.04"
+BUILD_NUMBER="104"
+BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
+cleanup() {
+  rm -rf "$BUILD_DIR"
+}
+trap cleanup EXIT
+
+ARM_BIN="$BUILD_DIR/${APP_NAME}-arm64"
+X64_BIN="$BUILD_DIR/${APP_NAME}-x86_64"
 ICONSET_DIR="$ROOT_DIR/${APP_NAME}.iconset"
-ICNS_PATH="$DIST_DIR/${APP_NAME}.icns"
-APPLE_SILICON_DIR="$DIST_DIR/apple-silicon"
-INTEL_DIR="$DIST_DIR/intel"
+ICNS_PATH="$BUILD_DIR/${APP_NAME}.icns"
+APPLE_SILICON_DIR="$BUILD_DIR/apple-silicon"
+INTEL_DIR="$BUILD_DIR/intel"
 APPLE_SILICON_APP="$APPLE_SILICON_DIR/${DISPLAY_NAME}.app"
 INTEL_APP="$INTEL_DIR/${DISPLAY_NAME}.app"
 APPLE_SILICON_DMG="$DIST_DIR/${APP_NAME}-${VERSION}-apple-silicon.dmg"
 INTEL_DMG="$DIST_DIR/${APP_NAME}-${VERSION}-intel.dmg"
-APPLE_SILICON_STAGE="$DIST_DIR/apple-silicon-dmg"
-INTEL_STAGE="$DIST_DIR/intel-dmg"
+APPLE_SILICON_STAGE="$BUILD_DIR/apple-silicon-dmg"
+INTEL_STAGE="$BUILD_DIR/intel-dmg"
 HOST_APP="$ROOT_DIR/${DISPLAY_NAME}.app"
 
 rm -rf "$DIST_DIR" "$HOST_APP" "$ICONSET_DIR"
@@ -53,6 +59,12 @@ create_app_bundle() {
   cp "$bin_path" "$macos_dir/$APP_NAME"
   chmod +x "$macos_dir/$APP_NAME"
   cp "$ICNS_PATH" "$resources_dir/${APP_NAME}.icns"
+  xattr -cr "$app_path" 2>/dev/null || true
+  xattr -d com.apple.FinderInfo "$app_path" 2>/dev/null || true
+  xattr -d com.apple.fileprovider.fpfs#P "$app_path" 2>/dev/null || true
+  xattr -d com.apple.provenance "$app_path" 2>/dev/null || true
+  codesign --force --deep --sign - --timestamp=none "$app_path"
+  codesign --verify --deep --strict --verbose=2 "$app_path"
 }
 
 create_app_bundle "$ARM_BIN" "$APPLE_SILICON_APP"
@@ -79,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.03",
-  "build": 103,
-  "notes": "Switch installer media to classic drag-and-drop DMGs for both Apple Silicon and Intel Macs.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.03/TaskManagerPro-1.0.03-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.03/TaskManagerPro-1.0.03-intel.dmg"
+  "version": "1.0.04",
+  "build": 104,
+  "notes": "Fix app bundle signing so the drag-and-drop DMG builds open correctly after download.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.04/TaskManagerPro-1.0.04-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.04/TaskManagerPro-1.0.04-intel.dmg"
 }
 JSON
 

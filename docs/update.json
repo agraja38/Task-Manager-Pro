@@ -1,7 +1,7 @@
 {
-  "version": "1.0.03",
-  "build": 103,
-  "notes": "Switch installer media to classic drag-and-drop DMGs for both Apple Silicon and Intel Macs.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.03/TaskManagerPro-1.0.03-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.03/TaskManagerPro-1.0.03-intel.dmg"
+  "version": "1.0.04",
+  "build": 104,
+  "notes": "Fix app bundle signing so the drag-and-drop DMG builds open correctly after download.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.04/TaskManagerPro-1.0.04-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.04/TaskManagerPro-1.0.04-intel.dmg"
 }

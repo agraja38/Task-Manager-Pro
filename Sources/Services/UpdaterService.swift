@@ -15,9 +15,9 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.03"
+    @Published var latestVersion = "1.0.04"
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.03"
+    @Published var currentVersion = "1.0.04"
 
     private let feedURL = URL(string: "https://raw.githubusercontent.com/agraja38/Task-Manager-Pro/main/docs/update.json")!
 
