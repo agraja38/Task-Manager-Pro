@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.13"
-BUILD_NUMBER="113"
+VERSION="1.0.14"
+BUILD_NUMBER="114"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.13",
-  "build": 113,
-  "notes": "Show low CPU usage with more precision, improve CPU-based ordering, and add menu bar monitor modes for Off, Compact, and Two-Line.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.13/TaskManagerPro-1.0.13-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.13/TaskManagerPro-1.0.13-intel.dmg"
+  "version": "1.0.14",
+  "build": 114,
+  "notes": "Add Dock icon and appearance settings, remove manual refresh and extra sort/filter options, and show real app icons in the process list.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.14/TaskManagerPro-1.0.14-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.14/TaskManagerPro-1.0.14-intel.dmg"
 }
 JSON
 

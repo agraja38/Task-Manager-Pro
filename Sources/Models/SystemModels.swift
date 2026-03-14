@@ -23,11 +23,17 @@ enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system = "Use System"
+    case light = "Light"
+    case dark = "Dark"
+
+    var id: String { rawValue }
+}
+
 enum ProcessFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case appsOnly = "Apps Only"
-    case currentUser = "My Processes"
-    case heavy = "Heavy"
     var id: String { rawValue }
 }
 
@@ -35,7 +41,6 @@ enum ProcessSortKey: String, CaseIterable, Identifiable {
     case cpu = "CPU"
     case memory = "Memory"
     case name = "Name"
-    case pid = "PID"
     case energy = "Energy"
     var id: String { rawValue }
 }
@@ -125,4 +130,5 @@ struct UpdateFeed: Decodable {
 extension Notification.Name {
     static let pulseTaskMetricsDidUpdate = Notification.Name("pulseTaskMetricsDidUpdate")
     static let pulseTaskMenuBarPreferencesDidChange = Notification.Name("pulseTaskMenuBarPreferencesDidChange")
+    static let pulseTaskPresentationPreferencesDidChange = Notification.Name("pulseTaskPresentationPreferencesDidChange")
 }

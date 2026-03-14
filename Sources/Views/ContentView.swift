@@ -10,11 +10,8 @@ struct ContentView: View {
             topNavigation
             Divider()
             detailView
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Refresh") { appState.refreshAll() }
-            }
+            Divider()
+            bottomBar
         }
     }
 
@@ -57,6 +54,17 @@ struct ContentView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+
+    private var bottomBar: some View {
+        HStack {
+            Spacer()
+            Text("Created by Agraja")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
     }
 }
 
@@ -146,9 +154,7 @@ struct ProcessRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(process.isHeavy ? Color.orange : .accentColor)
-                .frame(width: 18, height: 18)
+            ProcessAppIconView(process: process)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(process.name)
@@ -203,6 +209,39 @@ struct ProcessRow: View {
             return String(format: "%.2f%%", process.cpuUsage)
         }
         return String(format: "%.1f%%", process.cpuUsage)
+    }
+}
+
+struct ProcessAppIconView: View {
+    let process: ProcessSnapshot
+
+    private static var cache: [String: NSImage] = [:]
+
+    var body: some View {
+        Image(nsImage: icon)
+            .resizable()
+            .interpolation(.high)
+            .frame(width: 22, height: 22)
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
+
+    private var icon: NSImage {
+        let key = iconLookupPath
+        if let cached = Self.cache[key] {
+            return cached
+        }
+
+        let image = NSWorkspace.shared.icon(forFile: key)
+        image.size = NSSize(width: 22, height: 22)
+        Self.cache[key] = image
+        return image
+    }
+
+    private var iconLookupPath: String {
+        if let appRange = process.executablePath.range(of: ".app/") {
+            return String(process.executablePath[..<appRange.lowerBound]) + ".app"
+        }
+        return process.executablePath.isEmpty ? "/Applications" : process.executablePath
     }
 }
 
@@ -290,8 +329,17 @@ struct SettingsView: View {
                         Text("Task Manager Pro keeps the interface focused on a fast app list and a live performance dashboard.")
                             .foregroundStyle(.secondary)
 
+                        Toggle("Show app icon in Dock", isOn: $appState.showsDockIcon)
+
                         Picker("Menu Bar Monitor", selection: $appState.menuBarDisplayMode) {
                             ForEach(MenuBarDisplayMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Picker("Appearance", selection: $appState.appearanceMode) {
+                            ForEach(AppearanceMode.allCases) { mode in
                                 Text(mode.rawValue).tag(mode)
                             }
                         }

@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var latestMemoryPercent = 0.0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        applyActivationPolicy()
         applyMenuBarMode()
         NotificationCenter.default.addObserver(
             self,
@@ -21,6 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .pulseTaskMenuBarPreferencesDidChange,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePresentationPreferenceChange(_:)),
+            name: .pulseTaskPresentationPreferencesDidChange,
+            object: nil
+        )
     }
 
     @objc private func handleMetricsUpdate(_ notification: Notification) {
@@ -31,6 +37,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleMenuBarPreferenceChange(_ notification: Notification) {
         applyMenuBarMode()
+    }
+
+    @objc private func handlePresentationPreferenceChange(_ notification: Notification) {
+        applyActivationPolicy()
+    }
+
+    private func applyActivationPolicy() {
+        let showsDockIcon = UserDefaults.standard.object(forKey: "showsDockIcon") as? Bool ?? true
+        NSApp.setActivationPolicy(showsDockIcon ? .regular : .accessory)
     }
 
     private func applyMenuBarMode() {
@@ -51,7 +66,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let menu = NSMenu()
             menu.addItem(withTitle: "Open Task Manager Pro", action: #selector(openMainWindow), keyEquivalent: "")
             menu.addItem(NSMenuItem.separator())
-            menu.addItem(withTitle: "Refresh Now", action: #selector(forceRefresh), keyEquivalent: "")
             menu.addItem(withTitle: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
             menu.addItem(NSMenuItem.separator())
             menu.addItem(withTitle: "Quit Task Manager Pro", action: #selector(quitApp), keyEquivalent: "q")
@@ -97,10 +111,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for window in NSApplication.shared.windows {
             window.makeKeyAndOrderFront(nil)
         }
-    }
-
-    @objc private func forceRefresh() {
-        AppState.shared.refreshAll()
     }
 
     @objc private func checkForUpdates() {

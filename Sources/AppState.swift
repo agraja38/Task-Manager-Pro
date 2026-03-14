@@ -44,6 +44,18 @@ final class AppState: ObservableObject {
             NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil, userInfo: ["mode": menuBarDisplayMode.rawValue])
         }
     }
+    @Published var appearanceMode: AppearanceMode = UserDefaults.standard.string(forKey: "appearanceMode").flatMap(AppearanceMode.init(rawValue:)) ?? .system {
+        didSet {
+            UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode")
+            applyAppearanceMode()
+        }
+    }
+    @Published var showsDockIcon: Bool = UserDefaults.standard.object(forKey: "showsDockIcon") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(showsDockIcon, forKey: "showsDockIcon")
+            NotificationCenter.default.post(name: .pulseTaskPresentationPreferencesDidChange, object: nil, userInfo: ["showsDockIcon": showsDockIcon])
+        }
+    }
 
     let updater = UpdaterService()
 
@@ -52,12 +64,12 @@ final class AppState: ObservableObject {
     private var timer: Timer?
 
     private init() {
+        applyAppearanceMode()
         refreshAll()
         startTimers()
     }
 
     var filteredProcesses: [ProcessSnapshot] {
-        let currentUser = NSUserName()
         let base = processes.filter { process in
             let matchesSearch = searchText.isEmpty ||
                 process.name.localizedCaseInsensitiveContains(searchText) ||
@@ -68,8 +80,6 @@ final class AppState: ObservableObject {
             switch processFilter {
             case .all: matchesFilter = true
             case .appsOnly: matchesFilter = process.isApp
-            case .currentUser: matchesFilter = process.user == currentUser
-            case .heavy: matchesFilter = process.isHeavy
             }
 
             return matchesSearch && matchesFilter
@@ -79,7 +89,6 @@ final class AppState: ObservableObject {
         case .cpu: return base.sorted { $0.cpuUsage > $1.cpuUsage }
         case .memory: return base.sorted { $0.memoryMB > $1.memoryMB }
         case .name: return base.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        case .pid: return base.sorted { $0.pid < $1.pid }
         case .energy: return base.sorted { $0.energyImpact > $1.energyImpact }
         }
     }
@@ -168,6 +177,17 @@ final class AppState: ObservableObject {
             Task { @MainActor in
                 self?.refreshAll()
             }
+        }
+    }
+
+    private func applyAppearanceMode() {
+        switch appearanceMode {
+        case .system:
+            NSApp.appearance = nil
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
         }
     }
 

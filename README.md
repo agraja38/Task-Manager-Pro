@@ -2,9 +2,9 @@
 
 Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a clean top navigation layout, real-time charts, safe process controls, and a built-in updater.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.13/TaskManagerPro-1.0.13-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.14/TaskManagerPro-1.0.14-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.13/TaskManagerPro-1.0.13-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.14/TaskManagerPro-1.0.14-intel.dmg)
 
 ## Highlights
 
@@ -13,6 +13,7 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 - Performance dashboard with live CPU, memory, disk, network, GPU fallback, battery, and thermal-state cards
 - Search, sort, filter, dark mode, and resource-heavy highlighting
 - Menu bar live monitor with Off, Compact, and Two-Line display modes
+- Settings for Dock icon visibility and app appearance
 - Built-in update flow that downloads the latest DMG, installs it in the background, and reopens the app
 - Separate Apple Silicon and Intel drag-and-drop DMG builds
 
