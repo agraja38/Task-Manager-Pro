@@ -15,9 +15,9 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.09"
+    @Published var latestVersion = "1.0.10"
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.09"
+    @Published var currentVersion = "1.0.10"
 
     private let feedURL = URL(string: "https://raw.githubusercontent.com/agraja38/Task-Manager-Pro/main/docs/update.json")!
 
@@ -73,14 +73,16 @@ final class UpdaterService: ObservableObject {
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         let (localURL, _) = try await session.download(from: url)
         let namedURL = try prepareDownloadedDiskImage(from: localURL, sourceURL: url)
+        let mountedImage = try mountDiskImage(at: namedURL)
 
         phase = .installing
         progress = 0.9
-        statusText = "Opening disk image..."
-        NSWorkspace.shared.open(namedURL)
+        statusText = "Installing update..."
+        try launchBackgroundInstaller(from: mountedImage)
         progress = 1
         phase = .finished
-        statusText = "Disk image opened. Drag Task Manager Pro into Applications to finish updating."
+        statusText = "Installing update and reopening Task Manager Pro..."
+        NSApplication.shared.terminate(nil)
     }
 
     private func currentDownloadURL(from feed: UpdateFeed) -> String {
@@ -104,6 +106,96 @@ final class UpdaterService: ObservableObject {
         try FileManager.default.copyItem(at: temporaryURL, to: destinationURL)
         return destinationURL
     }
+
+    private func mountDiskImage(at diskImageURL: URL) throws -> MountedDiskImage {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+        process.arguments = ["attach", "-nobrowse", "-plist", diskImageURL.path]
+
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = Pipe()
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            throw NSError(domain: "TaskManagerPro", code: 11, userInfo: [NSLocalizedDescriptionKey: "macOS could not mount the downloaded update disk image."])
+        }
+
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+        guard
+            let dictionary = plist as? [String: Any],
+            let systemEntities = dictionary["system-entities"] as? [[String: Any]],
+            let mountPath = systemEntities.compactMap({ $0["mount-point"] as? String }).first
+        else {
+            throw NSError(domain: "TaskManagerPro", code: 12, userInfo: [NSLocalizedDescriptionKey: "The update disk image mounted, but Task Manager Pro could not locate its volume."])
+        }
+
+        return MountedDiskImage(diskImageURL: diskImageURL, mountPoint: URL(fileURLWithPath: mountPath))
+    }
+
+    private func launchBackgroundInstaller(from mountedImage: MountedDiskImage) throws {
+        let sourceAppURL = mountedImage.mountPoint.appendingPathComponent("Task Manager Pro.app")
+        guard FileManager.default.fileExists(atPath: sourceAppURL.path) else {
+            throw NSError(domain: "TaskManagerPro", code: 13, userInfo: [NSLocalizedDescriptionKey: "The downloaded update does not contain Task Manager Pro.app."])
+        }
+
+        let currentAppURL = Bundle.main.bundleURL
+        let targetAppURL = currentAppURL.pathExtension == "app"
+            ? currentAppURL
+            : URL(fileURLWithPath: "/Applications/Task Manager Pro.app")
+
+        let scriptURL = try writeInstallerScript()
+        let installer = Process()
+        installer.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        installer.arguments = [
+            scriptURL.path,
+            sourceAppURL.path,
+            targetAppURL.path,
+            mountedImage.mountPoint.path,
+            "\(ProcessInfo.processInfo.processIdentifier)"
+        ]
+
+        let nullHandle = try FileHandle(forWritingTo: URL(fileURLWithPath: "/dev/null"))
+        installer.standardOutput = nullHandle
+        installer.standardError = nullHandle
+        installer.standardInput = nullHandle
+        try installer.run()
+    }
+
+    private func writeInstallerScript() throws -> URL {
+        let scriptURL = FileManager.default.temporaryDirectory.appendingPathComponent("taskmanagerpro-self-update-\(UUID().uuidString).sh")
+        let script = """
+        #!/bin/zsh
+        set -euo pipefail
+
+        SOURCE_APP="$1"
+        TARGET_APP="$2"
+        MOUNT_POINT="$3"
+        PID_TO_WAIT="$4"
+
+        while kill -0 "$PID_TO_WAIT" 2>/dev/null; do
+          sleep 0.2
+        done
+
+        rm -rf "$TARGET_APP"
+        /usr/bin/ditto "$SOURCE_APP" "$TARGET_APP"
+        /usr/bin/xattr -cr "$TARGET_APP" 2>/dev/null || true
+        /usr/bin/open "$TARGET_APP"
+        /usr/bin/hdiutil detach "$MOUNT_POINT" -quiet || true
+        """
+
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        return scriptURL
+    }
+}
+
+private struct MountedDiskImage {
+    let diskImageURL: URL
+    let mountPoint: URL
 }
 
 final class DownloadProgressDelegate: NSObject, URLSessionDownloadDelegate {

@@ -2,20 +2,20 @@
 
 Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a cleaner sidebar layout, real-time charts, safe process controls, and a built-in updater.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.09/TaskManagerPro-1.0.09-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.09/TaskManagerPro-1.0.09-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-intel.dmg)
 
 ## Highlights
 
-- Processes view with name, PID, CPU, memory, estimated energy impact, status, and user
+- Processes view with app-focused rows, live CPU, live memory, and quick actions
 - Safe `Quit`, `Terminate`, and `Force Quit` actions with warnings for critical macOS processes
 - Performance dashboard with live CPU, memory, disk, network, GPU fallback, battery, and thermal-state cards
 - Startup Apps view with login items and best-effort startup impact estimates
 - Details view with executable path, bundle ID, child processes, launch time, and recent CPU/memory history
 - Search, sort, filter, process tree view, dark mode, and resource-heavy highlighting
 - Menu bar live monitor showing CPU and memory activity
-- Built-in update flow that downloads and opens the latest DMG
+- Built-in update flow that downloads the latest DMG, installs it in the background, and reopens the app
 - Separate Apple Silicon and Intel drag-and-drop DMG builds
 
 ## macOS Notes

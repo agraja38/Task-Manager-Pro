@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.09"
-BUILD_NUMBER="109"
+VERSION="1.0.10"
+BUILD_NUMBER="110"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.09",
-  "build": 109,
-  "notes": "Fix the Processes tab by removing expensive per-process architecture lookups and using a lighter Activity Monitor-style metadata path.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.09/TaskManagerPro-1.0.09-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.09/TaskManagerPro-1.0.09-intel.dmg"
+  "version": "1.0.10",
+  "build": 110,
+  "notes": "Keep the Processes tab stable while refreshing, simplify each row to app CPU and memory usage, and install updates in the background before reopening the app automatically.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-intel.dmg"
 }
 JSON
 

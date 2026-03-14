@@ -6,7 +6,7 @@ final class AppState: ObservableObject {
     static let shared = AppState()
 
     @Published var sidebarSelection: SidebarSection? = .processes
-    @Published var processFilter: ProcessFilter = .all
+    @Published var processFilter: ProcessFilter = .appsOnly
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
     @Published var treeViewEnabled = false

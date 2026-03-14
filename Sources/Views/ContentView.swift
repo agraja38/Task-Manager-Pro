@@ -112,19 +112,18 @@ struct ProcessTable: View {
     let processes: [ProcessSnapshot]
 
     var body: some View {
-        List(selection: $appState.selectedPID) {
-            ForEach(processes, id: \.pid) { process in
-                ProcessRow(process: process)
-                    .tag(process.pid)
-                    .listRowBackground(process.isHeavy ? Color.orange.opacity(0.13) : Color.clear)
-                    .contextMenu {
-                        Button("Quit") { appState.execute(.quit, for: process) }
-                        Button("Terminate") { appState.execute(.terminate, for: process) }
-                        Button("Force Quit") { appState.execute(.forceQuit, for: process) }
-                    }
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                ForEach(processes, id: \.pid) { process in
+                    ProcessRow(process: process)
+                        .contextMenu {
+                            Button("Quit") { appState.execute(.quit, for: process) }
+                            Button("Terminate") { appState.execute(.terminate, for: process) }
+                            Button("Force Quit") { appState.execute(.forceQuit, for: process) }
+                        }
+                }
             }
         }
-        .listStyle(.inset(alternatesRowBackgrounds: true))
     }
 }
 
@@ -138,12 +137,13 @@ struct ProcessTreeList: View {
     }
 
     var body: some View {
-        List(selection: $appState.selectedPID) {
-            ForEach(rootProcesses, id: \.pid) { root in
-                ProcessBranch(process: root, allProcesses: processes)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                ForEach(rootProcesses, id: \.pid) { root in
+                    ProcessBranch(process: root, allProcesses: processes)
+                }
             }
         }
-        .listStyle(.inset(alternatesRowBackgrounds: true))
     }
 }
 
@@ -163,10 +163,10 @@ struct ProcessBranch: View {
             }
         } label: {
             ProcessRow(process: process)
-                .tag(process.pid)
                 .contentShape(Rectangle())
                 .onTapGesture { appState.selectedPID = process.pid }
         }
+        .padding(.leading, 12)
     }
 }
 
@@ -175,52 +175,25 @@ struct ProcessRow: View {
     let process: ProcessSnapshot
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: process.isApp ? "app.fill" : "terminal")
-                .foregroundStyle(process.isHeavy ? .orange : .accentColor)
-                .frame(width: 20)
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(process.isHeavy ? Color.orange : .accentColor)
+                .frame(width: 18, height: 18)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(process.name)
                     .font(.headline)
+                    .lineLimit(1)
                 Text(process.bundleIdentifier.isEmpty ? process.executablePath : process.bundleIdentifier)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
 
-            Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 3) {
-                GridRow {
-                    Text("PID")
-                    Text("\(process.pid)")
-                }
-                GridRow {
-                    Text("CPU")
-                    Text(String(format: "%.1f%%", process.cpuUsage))
-                }
-            }
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
-
-            Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 3) {
-                GridRow {
-                    Text("Memory")
-                    Text(String(format: "%.0f MB", process.memoryMB))
-                }
-                GridRow {
-                    Text("Energy")
-                    Text(String(format: "%.0f", process.energyImpact))
-                }
-            }
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
-
-            Text(process.status)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(process.status == "Zombie" ? .red : .secondary)
-                .frame(width: 110, alignment: .leading)
+            ResourcePill(title: "CPU", value: String(format: "%.1f%%", process.cpuUsage), tint: .orange)
+            ResourcePill(title: "Memory", value: String(format: "%.0f MB", process.memoryMB), tint: .blue)
 
             Menu {
                 Button("Quit") { appState.execute(.quit, for: process) }
@@ -232,7 +205,48 @@ struct ProcessRow: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(backgroundFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(appState.selectedPID == process.pid ? Color.accentColor.opacity(0.65) : Color.white.opacity(0.03), lineWidth: appState.selectedPID == process.pid ? 1.2 : 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onTapGesture {
+            appState.selectedPID = process.pid
+        }
+    }
+
+    private var backgroundFill: Color {
+        if appState.selectedPID == process.pid {
+            return Color.accentColor.opacity(0.12)
+        }
+        if process.isHeavy {
+            return Color.orange.opacity(0.10)
+        }
+        return Color.white.opacity(0.04)
+    }
+}
+
+struct ResourcePill: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.primary)
+        }
+        .frame(width: 96, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
