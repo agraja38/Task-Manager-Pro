@@ -2,7 +2,7 @@
 
 PulseTask Manager is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a cleaner sidebar layout, real-time charts, safe process controls, and a built-in updater.
 
-[Direct Download](https://github.com/agraja38/pulse-task-manager-macos/releases/download/v1.0.0/PulseTaskManager-1.0.0.zip)
+[Direct Download](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.0/PulseTaskManager-1.0.0.zip)
 
 ## Highlights
 
