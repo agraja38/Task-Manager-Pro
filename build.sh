@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.28"
-BUILD_NUMBER="128"
+VERSION="1.0.29"
+BUILD_NUMBER="129"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.28",
-  "build": 128,
-  "notes": "Shorten the normal-mode Network widget again and replace the Processes header thermal badge with larger CPU, Memory, and Network highlights.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.28/TaskManagerPro-1.0.28-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.28/TaskManagerPro-1.0.28-intel.dmg"
+  "version": "1.0.29",
+  "build": 129,
+  "notes": "Add advanced-mode GPU graph data from the macOS graphics registry and shorten the normal-mode Network widget again so it fits the screen cleanly.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.29/TaskManagerPro-1.0.29-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.29/TaskManagerPro-1.0.29-intel.dmg"
 }
 JSON
 

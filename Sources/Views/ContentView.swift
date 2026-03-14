@@ -279,7 +279,8 @@ struct PerformanceView: View {
             let availableHeight = max(proxy.size.height - 110, 560)
             let advancedCardHeight = max(170, (availableHeight - 36) / 3)
             let normalCPUHeight = max(230, min(availableHeight * 0.48, 290))
-            let normalSecondaryHeight = max(118, min(138, (availableHeight - normalCPUHeight - 36) / 2))
+            let normalSecondaryHeight = max(118, min(136, (availableHeight - normalCPUHeight - 36) / 2))
+            let normalNetworkHeight = max(108, normalSecondaryHeight - 14)
             VStack(alignment: .leading, spacing: 18) {
                 Text("Performance")
                     .font(.system(size: 28, weight: .bold))
@@ -304,7 +305,7 @@ struct PerformanceView: View {
                             MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: normalSecondaryHeight)
                         }
                         GridRow {
-                            MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: normalSecondaryHeight)
+                            MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: normalNetworkHeight)
                                 .gridCellColumns(2)
                         }
                     }
@@ -546,7 +547,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Toggle("Show advanced telemetry widgets", isOn: $appState.showsAdvancedTelemetryWidgets)
 
-                        Text("Turn this on after you set up a privileged helper. Normal mode keeps the dashboard focused on CPU, memory, disk, and network, while advanced mode also shows the GPU and Battery & System widgets.")
+                        Text("Normal mode keeps the dashboard focused on CPU, memory, disk, and network. Advanced mode also shows the GPU and Battery & System widgets, using Activity Monitor-style GPU utilization when macOS exposes it.")
                             .foregroundStyle(.secondary)
 
                         Text("To achieve deeper GPU and thermal telemetry:")

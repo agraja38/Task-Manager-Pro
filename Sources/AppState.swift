@@ -123,10 +123,11 @@ final class AppState: ObservableObject {
         })
         let processService = self.processService
         let metricsService = self.metricsService
+        let includeAdvancedTelemetry = self.showsAdvancedTelemetryWidgets
 
         Task.detached(priority: .userInitiated) {
             let processes = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
-            let metrics = metricsService.sample()
+            let metrics = metricsService.sample(includeAdvancedTelemetry: includeAdvancedTelemetry)
 
             await MainActor.run {
                 self.processes = processes

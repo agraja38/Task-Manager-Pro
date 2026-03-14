@@ -14,13 +14,14 @@ final class SystemMetricsService {
     private var previousDiskTotals: (read: Double, write: Double)?
     private var previousDiskTimestamp: Date?
 
-    func sample() -> PerformanceSnapshot {
+    func sample(includeAdvancedTelemetry: Bool) -> PerformanceSnapshot {
         let cpu = currentCPUPercent()
         let memory = currentMemory()
         let network = currentNetwork()
         let disk = currentDisk()
         let battery = currentBattery()
         let thermal = currentThermalLevel()
+        let gpuPercent = includeAdvancedTelemetry ? currentGPUPercent() : nil
 
         return PerformanceSnapshot(
             cpuPercent: cpu.overallPercent,
@@ -32,7 +33,7 @@ final class SystemMetricsService {
             diskWriteMBps: disk.write,
             networkInKBps: network.input,
             networkOutKBps: network.output,
-            gpuPercent: nil,
+            gpuPercent: gpuPercent,
             batteryPercent: battery.percent,
             isCharging: battery.isCharging,
             thermalLevel: thermal,
@@ -186,6 +187,39 @@ final class SystemMetricsService {
 
         guard let current, let max, max > 0 else { return (nil, charging) }
         return ((current / max) * 100, charging)
+    }
+
+    private func currentGPUPercent() -> Double? {
+        let acceleratorOutput = Shell.run("/usr/sbin/ioreg", arguments: ["-r", "-d", "1", "-w", "0", "-c", "IOAccelerator"])
+        if let percent = parseGPUPercent(from: acceleratorOutput) {
+            return percent
+        }
+
+        let agxOutput = Shell.run("/usr/sbin/ioreg", arguments: ["-r", "-d", "2", "-w", "0", "-c", "AGXAccelerator"])
+        return parseGPUPercent(from: agxOutput)
+    }
+
+    private func parseGPUPercent(from output: String) -> Double? {
+        let patterns = [
+            #""Device Utilization %"\s*=\s*([0-9]+(?:\.[0-9]+)?)"#,
+            #""Renderer Utilization %"\s*=\s*([0-9]+(?:\.[0-9]+)?)"#,
+            #""GPU UT Engagement centi-%".*?([0-9]+(?:\.[0-9]+)?)"#
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let nsRange = NSRange(output.startIndex..., in: output)
+            guard
+                let match = regex.firstMatch(in: output, options: [], range: nsRange),
+                let valueRange = Range(match.range(at: 1), in: output),
+                let value = Double(output[valueRange])
+            else {
+                continue
+            }
+            return min(max(value, 0), 100)
+        }
+
+        return nil
     }
 
     private func currentThermalLevel() -> String {

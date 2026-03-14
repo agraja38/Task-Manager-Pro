@@ -2,9 +2,9 @@
 
 Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a clean top navigation layout, real-time charts, safe process controls, and a built-in updater.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.28/TaskManagerPro-1.0.28-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.29/TaskManagerPro-1.0.29-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.28/TaskManagerPro-1.0.28-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.29/TaskManagerPro-1.0.29-intel.dmg)
 
 ## Highlights
 
@@ -27,7 +27,7 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 
 ## Advanced Telemetry Helper
 
-For normal users, the Performance tab stays focused on CPU, memory, disk, and network. If you want richer GPU and thermal telemetry, Task Manager Pro can be paired with an optional privileged helper.
+For normal users, the Performance tab stays focused on CPU, memory, disk, and network. In advanced mode, Task Manager Pro also uses Activity Monitor-style GPU utilization from the macOS graphics registry when it is available, and it can be paired with an optional privileged helper for deeper telemetry.
 
 To achieve that helper flow:
 
