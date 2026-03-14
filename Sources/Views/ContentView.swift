@@ -268,8 +268,8 @@ struct PerformanceView: View {
         GeometryReader { proxy in
             let availableHeight = max(proxy.size.height - 110, 560)
             let advancedCardHeight = max(170, (availableHeight - 36) / 3)
-            let normalCPUHeight = max(250, min(availableHeight * 0.5, 320))
-            let normalSecondaryHeight = max(145, (availableHeight - normalCPUHeight - 36) / 2)
+            let normalCPUHeight = max(230, min(availableHeight * 0.48, 290))
+            let normalSecondaryHeight = max(125, min(150, (availableHeight - normalCPUHeight - 36) / 2))
             VStack(alignment: .leading, spacing: 18) {
                 Text("Performance")
                     .font(.system(size: 28, weight: .bold))
@@ -371,8 +371,12 @@ struct CPUChartCard: View {
             columnCount = 2
         case 5 ... 8:
             columnCount = 3
-        default:
+        case 9 ... 12:
             columnCount = 4
+        case 13 ... 16:
+            columnCount = 5
+        default:
+            columnCount = 6
         }
 
         return Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount)
@@ -442,8 +446,8 @@ struct CPUChartCard: View {
     private var coreGrid: some View {
         LazyVGrid(columns: perCoreColumns, spacing: 8) {
             ForEach(coreSeries) { series in
-                CoreMiniChartCard(series: series)
-                            }
+                CoreMiniChartCard(series: series, compact: !allowsCoreScrolling)
+            }
         }
         .padding(.trailing, allowsCoreScrolling ? 4 : 0)
     }
@@ -451,16 +455,17 @@ struct CPUChartCard: View {
 
 struct CoreMiniChartCard: View {
     let series: CPUChartCard.CoreSeries
+    let compact: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: compact ? 2 : 4) {
             HStack {
                 Text(series.label)
-                    .font(.caption.weight(.semibold))
+                    .font((compact ? Font.caption2 : Font.caption).weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
                 Text(currentValue)
-                    .font(.caption2.monospacedDigit())
+                    .font((compact ? Font.caption2 : Font.caption2).monospacedDigit())
                     .foregroundStyle(series.color)
             }
 
@@ -482,10 +487,10 @@ struct CoreMiniChartCard: View {
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
             .chartYScale(domain: 0 ... 100)
-            .frame(height: 40)
+            .frame(height: compact ? 28 : 40)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, compact ? 6 : 8)
+        .padding(.vertical, compact ? 4 : 6)
         .background(series.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 

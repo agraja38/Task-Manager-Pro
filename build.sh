@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.26"
-BUILD_NUMBER="126"
+VERSION="1.0.27"
+BUILD_NUMBER="127"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.26",
-  "build": 126,
-  "notes": "Add an advanced telemetry layout toggle, keep the normal dashboard focused on core metrics, and make per-core CPU charts use a unified red style.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.26/TaskManagerPro-1.0.26-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.26/TaskManagerPro-1.0.26-intel.dmg"
+  "version": "1.0.27",
+  "build": 127,
+  "notes": "Make the per-core CPU cards denser for high-core Macs and shorten the normal-mode Network widget so it no longer clips at the bottom.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.27/TaskManagerPro-1.0.27-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.27/TaskManagerPro-1.0.27-intel.dmg"
 }
 JSON
 
