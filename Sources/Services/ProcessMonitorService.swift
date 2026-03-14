@@ -19,7 +19,7 @@ final class ProcessMonitorService {
         for (pid, metadata) in metadataByPID {
             let live = liveStatsByPID[pid]
             let ppid = metadata.ppid
-            let cpu = live?.cpuUsage ?? 0
+            let cpu = live?.cpuUsage ?? metadata.cpuUsage
             let user = live?.user ?? metadata.user
             let memoryMB = live?.memoryMB ?? metadata.memoryMB
             let stateCode = live?.stateCode ?? metadata.stateCode
@@ -92,12 +92,12 @@ final class ProcessMonitorService {
     }
 
     private func fetchProcessMetadata() -> [Int32: ProcessMetadata] {
-        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,rss=,state=,lstart=,comm="], timeout: 10)
+        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,rss=,state=,pcpu=,lstart=,comm="], timeout: 10)
         var results: [Int32: ProcessMetadata] = [:]
 
         for line in output.split(separator: "\n") {
-            let fields = line.split(maxSplits: 10, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-            guard fields.count >= 11 else { continue }
+            let fields = line.split(maxSplits: 11, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
+            guard fields.count >= 12 else { continue }
             guard
                 let pid = Int32(fields[0]),
                 let ppid = Int32(fields[1])
@@ -106,8 +106,9 @@ final class ProcessMonitorService {
             let user = String(fields[2])
             let memoryMB = (Double(fields[3]) ?? 0) / 1024
             let stateCode = String(fields[4])
-            let dateString = [fields[5], fields[6], fields[7], fields[8], fields[9]].map(String.init).joined(separator: " ")
-            let executablePath = String(fields[10])
+            let cpuUsage = Double(fields[5]) ?? 0
+            let dateString = [fields[6], fields[7], fields[8], fields[9], fields[10]].map(String.init).joined(separator: " ")
+            let executablePath = String(fields[11])
 
             results[pid] = ProcessMetadata(
                 pid: pid,
@@ -115,6 +116,7 @@ final class ProcessMonitorService {
                 user: user,
                 memoryMB: memoryMB,
                 stateCode: stateCode,
+                cpuUsage: cpuUsage,
                 launchDate: dateFormatter.date(from: dateString),
                 executablePath: executablePath
             )
@@ -131,14 +133,19 @@ final class ProcessMonitorService {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard let firstToken = trimmed.split(separator: " ").first, Int32(firstToken) != nil else { continue }
 
-            let fields = trimmed.split(maxSplits: 5, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
+            let fields = trimmed.split(whereSeparator: \.isWhitespace)
             guard fields.count >= 6, let pid = Int32(fields[0]) else { continue }
 
+            let cpuToken = fields[fields.count - 4]
+            let memoryToken = fields[fields.count - 3]
+            let stateToken = fields[fields.count - 2]
+            let userToken = fields[fields.count - 1]
+
             results[pid] = LiveActivityStat(
-                cpuUsage: Double(fields[2].replacingOccurrences(of: "%", with: "")) ?? 0,
-                memoryMB: parseMemoryToMB(String(fields[3])),
-                stateCode: String(fields[4]),
-                user: String(fields[5])
+                cpuUsage: Double(cpuToken.replacingOccurrences(of: "%", with: "")) ?? 0,
+                memoryMB: parseMemoryToMB(String(memoryToken)),
+                stateCode: String(stateToken),
+                user: String(userToken)
             )
         }
 
@@ -223,6 +230,7 @@ private struct ProcessMetadata {
     let user: String
     let memoryMB: Double
     let stateCode: String
+    let cpuUsage: Double
     let launchDate: Date?
     let executablePath: String
 }

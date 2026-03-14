@@ -1,7 +1,7 @@
 {
-  "version": "1.0.10",
-  "build": 110,
-  "notes": "Keep the Processes tab stable while refreshing, simplify each row to app CPU and memory usage, and install updates in the background before reopening the app automatically.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-intel.dmg"
+  "version": "1.0.11",
+  "build": 111,
+  "notes": "Show live app CPU values more reliably, move navigation to a compact top tab bar, and remove the old Startup Apps and Details sections.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.11/TaskManagerPro-1.0.11-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.11/TaskManagerPro-1.0.11-intel.dmg"
 }

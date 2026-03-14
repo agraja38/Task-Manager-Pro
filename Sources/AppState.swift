@@ -5,14 +5,13 @@ import Foundation
 final class AppState: ObservableObject {
     static let shared = AppState()
 
-    @Published var sidebarSelection: SidebarSection? = .processes
+    @Published var selectedSection: TopSection = .processes
     @Published var processFilter: ProcessFilter = .appsOnly
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
     @Published var treeViewEnabled = false
     @Published var selectedPID: Int32?
     @Published var processes: [ProcessSnapshot] = []
-    @Published var startupItems: [StartupItem] = []
     @Published var alerts: [AlertItem] = []
     @Published var latestError = ""
     @Published var currentMetrics = PerformanceSnapshot(
@@ -45,7 +44,6 @@ final class AppState: ObservableObject {
 
     private let processService = ProcessMonitorService()
     private let metricsService = SystemMetricsService()
-    private let startupService = StartupItemsService()
     private var timer: Timer?
 
     private init() {
@@ -81,16 +79,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    var selectedProcess: ProcessSnapshot? {
-        guard let selectedPID else { return filteredProcesses.first }
-        return processes.first(where: { $0.pid == selectedPID }) ?? filteredProcesses.first
-    }
-
-    var childProcesses: [ProcessSnapshot] {
-        guard let selected = selectedProcess else { return [] }
-        return selected.childPIDs.compactMap { pid in processes.first(where: { $0.pid == pid }) }
-    }
-
     func refreshAll() {
         let appMetadataByPID = Dictionary(uniqueKeysWithValues: NSWorkspace.shared.runningApplications.map { app in
             (
@@ -109,7 +97,6 @@ final class AppState: ObservableObject {
         })
         let processService = self.processService
         let metricsService = self.metricsService
-        let startupService = self.startupService
 
         Task.detached(priority: .userInitiated) {
             let processes = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
@@ -131,13 +118,6 @@ final class AppState: ObservableObject {
 
                 let summary = String(format: "CPU %2.0f%%  MEM %2.0f%%", metrics.cpuPercent, metrics.memoryPercent)
                 NotificationCenter.default.post(name: .pulseTaskMetricsDidUpdate, object: nil, userInfo: ["summary": summary])
-            }
-        }
-
-        Task.detached(priority: .utility) {
-            let startupItems = startupService.fetchStartupItems()
-            await MainActor.run {
-                self.startupItems = startupItems
             }
         }
     }

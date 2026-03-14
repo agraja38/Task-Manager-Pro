@@ -1,18 +1,16 @@
 # Task Manager Pro
 
-Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a cleaner sidebar layout, real-time charts, safe process controls, and a built-in updater.
+Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a clean top navigation layout, real-time charts, safe process controls, and a built-in updater.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.11/TaskManagerPro-1.0.11-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.10/TaskManagerPro-1.0.10-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.11/TaskManagerPro-1.0.11-intel.dmg)
 
 ## Highlights
 
 - Processes view with app-focused rows, live CPU, live memory, and quick actions
 - Safe `Quit`, `Terminate`, and `Force Quit` actions with warnings for critical macOS processes
 - Performance dashboard with live CPU, memory, disk, network, GPU fallback, battery, and thermal-state cards
-- Startup Apps view with login items and best-effort startup impact estimates
-- Details view with executable path, bundle ID, child processes, launch time, and recent CPU/memory history
 - Search, sort, filter, process tree view, dark mode, and resource-heavy highlighting
 - Menu bar live monitor showing CPU and memory activity
 - Built-in update flow that downloads the latest DMG, installs it in the background, and reopens the app
@@ -22,12 +20,11 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 
 - Task Manager Pro uses public APIs first and falls back to safe alternatives when macOS restricts direct low-level telemetry.
 - GPU usage and exact temperature readings are limited on macOS without private APIs or elevated tools.
-- Startup item inspection may ask for Automation permission because login items are queried through `System Events`.
 - Some process terminations may still be denied by macOS if the current user does not own the target process or the process is protected.
 
 ## Updating
 
-Task Manager Pro checks a GitHub-hosted `docs/update.json` feed. The in-app updater downloads the latest signed disk image, shows progress during download, then opens the DMG so you can drag the app into Applications.
+Task Manager Pro checks a GitHub-hosted `docs/update.json` feed. The in-app updater downloads the latest signed disk image, replaces the installed app in the background, and reopens Task Manager Pro automatically.
 
 When publishing a new version:
 

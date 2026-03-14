@@ -6,13 +6,9 @@ struct ContentView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        NavigationSplitView {
-            List(SidebarSection.allCases, selection: $appState.sidebarSelection) { section in
-                Label(section.rawValue, systemImage: section.symbolName)
-                    .tag(section)
-            }
-            .navigationSplitViewColumnWidth(min: 210, ideal: 230)
-        } detail: {
+        VStack(spacing: 0) {
+            topNavigation
+            Divider()
             detailView
         }
         .toolbar {
@@ -24,18 +20,43 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detailView: some View {
-        switch appState.sidebarSelection ?? .processes {
+        switch appState.selectedSection {
         case .processes:
             ProcessesView()
         case .performance:
             PerformanceView()
-        case .startupApps:
-            StartupAppsView()
-        case .details:
-            DetailsView()
         case .settings:
             SettingsView()
         }
+    }
+
+    private var topNavigation: some View {
+        HStack(spacing: 10) {
+            ForEach(TopSection.allCases) { section in
+                Button {
+                    appState.selectedSection = section
+                } label: {
+                    Label(section.rawValue, systemImage: section.symbolName)
+                        .font(.headline)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .frame(minWidth: 130)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(appState.selectedSection == section ? Color.accentColor.opacity(0.16) : Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(appState.selectedSection == section ? Color.accentColor.opacity(0.6) : Color.white.opacity(0.06), lineWidth: 1)
+                )
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
     }
 }
 
@@ -88,9 +109,12 @@ struct ProcessesView: View {
                 }
                 .frame(width: 140)
 
-                Toggle("Tree", isOn: $appState.treeViewEnabled)
-                    .toggleStyle(.switch)
-                    .frame(width: 80)
+                HStack(spacing: 8) {
+                    Text("Tree")
+                    Toggle("", isOn: $appState.treeViewEnabled)
+                        .labelsHidden()
+                }
+                .fixedSize()
             }
         }
     }
@@ -299,116 +323,6 @@ struct PerformanceView: View {
     }
 }
 
-struct StartupAppsView: View {
-    @EnvironmentObject private var appState: AppState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Startup Apps")
-                .font(.system(size: 28, weight: .bold))
-            Text("Login items are shown with a best-effort startup impact estimate. Some background tasks need Automation permission or private APIs to inspect fully.")
-                .foregroundStyle(.secondary)
-
-            List(appState.startupItems) { item in
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(item.name).font(.headline)
-                        Spacer()
-                        Text(item.impact)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(item.impact == "High" ? .orange : .secondary)
-                    }
-                    Text(item.path)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Text(item.source)
-                        if item.isHidden { Text("Hidden at login") }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            }
-            .listStyle(.inset(alternatesRowBackgrounds: true))
-        }
-        .padding(20)
-    }
-}
-
-struct DetailsView: View {
-    @EnvironmentObject private var appState: AppState
-
-    var body: some View {
-        ScrollView {
-            if let process = appState.selectedProcess {
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(process.name)
-                                .font(.system(size: 28, weight: .bold))
-                            Text("PID \(process.pid) • \(process.user)")
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button("Quit") { appState.execute(.quit, for: process) }
-                        Button("Terminate") { appState.execute(.terminate, for: process) }
-                        Button("Force Quit") { appState.execute(.forceQuit, for: process) }
-                    }
-
-                    GroupBox("Metadata") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            DetailRow(label: "Executable Path", value: process.executablePath)
-                            DetailRow(label: "Bundle ID", value: process.bundleIdentifier.isEmpty ? "Not available" : process.bundleIdentifier)
-                            DetailRow(label: "Launch Time", value: process.launchDate?.formatted(date: .abbreviated, time: .standard) ?? "Unknown")
-                            DetailRow(label: "Elapsed", value: process.elapsedTime)
-                            DetailRow(label: "Status", value: process.status)
-                            DetailRow(label: "Energy Impact", value: String(format: "%.1f", process.energyImpact))
-                        }
-                        .padding(.vertical, 8)
-                    }
-
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                        MetricChartCard(title: "Historical CPU", subtitle: "Recent process activity", history: appState.processHistory[process.pid] ?? [], color: .orange, yLabel: "%", height: 220)
-                        MetricChartCard(title: "Historical Memory", subtitle: "Resident memory over time", history: appState.memoryProcessHistory[process.pid] ?? [], color: .blue, yLabel: "MB", height: 220)
-                    }
-
-                    GroupBox("Child Processes") {
-                        if appState.childProcesses.isEmpty {
-                            Text("No child processes detected.")
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 8)
-                        } else {
-                            ForEach(appState.childProcesses, id: \.pid) { child in
-                                HStack {
-                                    Text(child.name)
-                                    Spacer()
-                                    Text("PID \(child.pid)")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.vertical, 3)
-                            }
-                        }
-                    }
-                }
-                .padding(20)
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "sidebar.left")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.secondary)
-                    Text("No process selected")
-                        .font(.title2.weight(.semibold))
-                    Text("Select a process from the Processes tab to inspect details.")
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 360)
-            }
-        }
-    }
-}
-
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
 
@@ -460,7 +374,7 @@ struct SettingsView: View {
 
                 GroupBox("macOS Access Notes") {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Some metrics are intentionally restricted by macOS. GPU usage, package energy impact, temperatures, and certain startup/background items may need private APIs, root tools, or user-granted permissions.")
+                        Text("Some metrics are intentionally restricted by macOS. GPU usage, package energy impact, and temperatures may need private APIs, root tools, or user-granted permissions.")
                         Text("Task Manager Pro stays on the safe side: it uses public APIs first, warns before destructive actions, and falls back to best-effort alternatives when direct telemetry is unavailable.")
                     }
                     .foregroundStyle(.secondary)

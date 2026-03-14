@@ -1,10 +1,8 @@
 import Foundation
 
-enum SidebarSection: String, CaseIterable, Identifiable {
+enum TopSection: String, CaseIterable, Identifiable {
     case processes = "Processes"
     case performance = "Performance"
-    case startupApps = "Startup Apps"
-    case details = "Details"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -12,8 +10,6 @@ enum SidebarSection: String, CaseIterable, Identifiable {
         switch self {
         case .processes: "list.bullet.rectangle.portrait"
         case .performance: "waveform.path.ecg.rectangle"
-        case .startupApps: "power"
-        case .details: "info.circle"
         case .settings: "gearshape"
         }
     }
@@ -78,15 +74,6 @@ struct RunningAppMetadata: Hashable {
     let isFinishedLaunching: Bool
     let isRegularApp: Bool
     let architecture: String
-}
-
-struct StartupItem: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let path: String
-    let isHidden: Bool
-    let impact: String
-    let source: String
 }
 
 struct AlertItem: Identifiable, Hashable {
