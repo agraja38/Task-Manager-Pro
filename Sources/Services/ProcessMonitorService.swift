@@ -10,8 +10,7 @@ final class ProcessMonitorService {
         return formatter
     }()
 
-    func fetchProcesses(runningApplications: [NSRunningApplication]) -> [ProcessSnapshot] {
-        let runningApps = Dictionary(uniqueKeysWithValues: runningApplications.map { ($0.processIdentifier, $0) })
+    func fetchProcesses(appMetadataByPID: [Int32: RunningAppMetadata]) -> [ProcessSnapshot] {
         let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,%cpu=,rss=,state=,lstart=,command="])
         var provisional: [Int32: ProcessSnapshot] = [:]
         var childrenByParent: [Int32: [Int32]] = [:]
@@ -30,7 +29,7 @@ final class ProcessMonitorService {
             let stateCode = String(fields[5])
             let dateString = [fields[6], fields[7], fields[8], fields[9], fields[10]].map(String.init).joined(separator: " ")
             let executablePath = String(fields[11])
-            let app = runningApps[pid]
+            let app = appMetadataByPID[pid]
             let bundleID = app?.bundleIdentifier ?? ""
             let appName = app?.localizedName ?? URL(fileURLWithPath: executablePath).lastPathComponent
             let launchDate = dateFormatter.date(from: dateString)
@@ -42,8 +41,8 @@ final class ProcessMonitorService {
                 "Executable": executablePath,
                 "Bundle ID": bundleID.isEmpty ? "Not available" : bundleID,
                 "Elapsed": elapsedString(from: launchDate),
-                "Architecture": (app?.executableArchitecture ?? 0) == CPU_TYPE_X86_64 ? "Intel" : "Apple Silicon / Native",
-                "Launch Type": app?.activationPolicy == .regular ? "Regular app" : "Background or daemon"
+                "Architecture": app?.architecture ?? architectureForExecutable(at: executablePath),
+                "Launch Type": app?.isRegularApp == true ? "Regular app" : "Background or daemon"
             ]
 
             provisional[pid] = ProcessSnapshot(
@@ -116,7 +115,7 @@ final class ProcessMonitorService {
         }
     }
 
-    private func statusLabel(for state: String, app: NSRunningApplication?) -> String {
+    private func statusLabel(for state: String, app: RunningAppMetadata?) -> String {
         if app?.isActive == true { return "Frontmost" }
         if app?.isFinishedLaunching == false { return "Launching" }
 
@@ -149,5 +148,12 @@ final class ProcessMonitorService {
         if criticalBundleIDs.contains(bundleID) { return true }
 
         return path.hasPrefix("/System/Library") || path.hasPrefix("/usr/libexec")
+    }
+
+    private func architectureForExecutable(at path: String) -> String {
+        let fileInfo = Shell.run("/usr/bin/file", arguments: [path], timeout: 2)
+        if fileInfo.localizedCaseInsensitiveContains("x86_64") { return "Intel" }
+        if fileInfo.localizedCaseInsensitiveContains("arm64") { return "Apple Silicon / Native" }
+        return "Unknown"
     }
 }

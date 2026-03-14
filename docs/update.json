@@ -1,7 +1,7 @@
 {
-  "version": "1.0.05",
-  "build": 105,
-  "notes": "Fix refresh hangs so processes, performance stats, and startup information load even when macOS blocks login-item automation.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.05/TaskManagerPro-1.0.05-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.05/TaskManagerPro-1.0.05-intel.dmg"
+  "version": "1.0.06",
+  "build": 106,
+  "notes": "Fix the Processes tab, fit the Performance dashboard without scrolling, and replace the update popup with inline status text.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.06/TaskManagerPro-1.0.06-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.06/TaskManagerPro-1.0.06-intel.dmg"
 }

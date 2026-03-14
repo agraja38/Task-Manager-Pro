@@ -69,6 +69,16 @@ struct ProcessSnapshot: Identifiable, Hashable {
     }
 }
 
+struct RunningAppMetadata: Hashable {
+    let pid: Int32
+    let localizedName: String
+    let bundleIdentifier: String
+    let isActive: Bool
+    let isFinishedLaunching: Bool
+    let isRegularApp: Bool
+    let architecture: String
+}
+
 struct StartupItem: Identifiable, Hashable {
     let id = UUID()
     let name: String

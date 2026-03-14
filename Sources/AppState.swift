@@ -40,7 +40,6 @@ final class AppState: ObservableObject {
 
     @Published var cpuAlertThreshold = 85.0
     @Published var memoryAlertThreshold = 85.0
-    @Published var updateSheetPresented = false
 
     let updater = UpdaterService()
 
@@ -93,13 +92,26 @@ final class AppState: ObservableObject {
     }
 
     func refreshAll() {
-        let runningApps = NSWorkspace.shared.runningApplications
+        let appMetadataByPID = Dictionary(uniqueKeysWithValues: NSWorkspace.shared.runningApplications.map { app in
+            (
+                app.processIdentifier,
+                RunningAppMetadata(
+                    pid: app.processIdentifier,
+                    localizedName: app.localizedName ?? "",
+                    bundleIdentifier: app.bundleIdentifier ?? "",
+                    isActive: app.isActive,
+                    isFinishedLaunching: app.isFinishedLaunching,
+                    isRegularApp: app.activationPolicy == .regular,
+                    architecture: app.executableArchitecture == CPU_TYPE_X86_64 ? "Intel" : "Apple Silicon / Native"
+                )
+            )
+        })
         let processService = self.processService
         let metricsService = self.metricsService
         let startupService = self.startupService
 
         Task.detached(priority: .userInitiated) {
-            let processes = processService.fetchProcesses(runningApplications: runningApps)
+            let processes = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
             let metrics = metricsService.sample()
 
             await MainActor.run {
@@ -156,7 +168,6 @@ final class AppState: ObservableObject {
     }
 
     func startUpdateFlow() {
-        updateSheetPresented = true
         Task { await updater.checkForUpdates() }
     }
 

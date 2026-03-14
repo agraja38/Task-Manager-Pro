@@ -20,11 +20,6 @@ struct ContentView: View {
                 Button("Refresh") { appState.refreshAll() }
             }
         }
-        .sheet(isPresented: $appState.updateSheetPresented) {
-            UpdateSheetView()
-                .environmentObject(appState)
-                .frame(width: 460, height: 260)
-        }
     }
 
     @ViewBuilder
@@ -245,18 +240,20 @@ struct PerformanceView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        ScrollView {
+        GeometryReader { proxy in
+            let availableHeight = max(proxy.size.height - 110, 560)
+            let cardHeight = max(170, (availableHeight - 36) / 3)
             VStack(alignment: .leading, spacing: 18) {
                 Text("Performance")
                     .font(.system(size: 28, weight: .bold))
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    MetricChartCard(title: "CPU", subtitle: String(format: "%.1f%% active", appState.currentMetrics.cpuPercent), history: appState.cpuHistory, color: .orange, yLabel: "%")
-                    MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%")
-                    MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s")
-                    MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s")
-                    MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%")
-                    BatteryCard()
+                    MetricChartCard(title: "CPU", subtitle: String(format: "%.1f%% active", appState.currentMetrics.cpuPercent), history: appState.cpuHistory, color: .orange, yLabel: "%", height: cardHeight)
+                    MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: cardHeight)
+                    MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: cardHeight)
+                    MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: cardHeight)
+                    MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: cardHeight)
+                    BatteryCard(height: cardHeight)
                 }
 
                 if !appState.alerts.isEmpty {
@@ -283,6 +280,7 @@ struct PerformanceView: View {
                 }
             }
             .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 }
@@ -357,8 +355,8 @@ struct DetailsView: View {
                     }
 
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                        MetricChartCard(title: "Historical CPU", subtitle: "Recent process activity", history: appState.processHistory[process.pid] ?? [], color: .orange, yLabel: "%")
-                        MetricChartCard(title: "Historical Memory", subtitle: "Resident memory over time", history: appState.memoryProcessHistory[process.pid] ?? [], color: .blue, yLabel: "MB")
+                        MetricChartCard(title: "Historical CPU", subtitle: "Recent process activity", history: appState.processHistory[process.pid] ?? [], color: .orange, yLabel: "%", height: 220)
+                        MetricChartCard(title: "Historical Memory", subtitle: "Resident memory over time", history: appState.memoryProcessHistory[process.pid] ?? [], color: .blue, yLabel: "MB", height: 220)
                     }
 
                     GroupBox("Child Processes") {
@@ -435,7 +433,13 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Task Manager Pro includes a built-in updater that checks a GitHub-hosted JSON feed, downloads the latest build, and shows progress while downloading and opening the installer.")
                             .foregroundStyle(.secondary)
-                        Button("Check for Updates Now") { appState.startUpdateFlow() }
+                        HStack(spacing: 12) {
+                            Button("Check for Updates Now") { appState.startUpdateFlow() }
+                            Text(appState.updater.statusText)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
                     }
                     .padding(.vertical, 8)
                 }
@@ -454,47 +458,13 @@ struct SettingsView: View {
     }
 }
 
-struct UpdateSheetView: View {
-    @EnvironmentObject private var appState: AppState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Software Update")
-                .font(.system(size: 24, weight: .bold))
-            Text(appState.updater.statusText)
-                .foregroundStyle(.secondary)
-            ProgressView(value: appState.updater.progress)
-                .progressViewStyle(.linear)
-            HStack {
-                Text("Current version: \(appState.updater.currentVersion)")
-                Spacer()
-                Text("Latest version: \(appState.updater.latestVersion)")
-            }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            if !appState.updater.releaseNotes.isEmpty {
-                GroupBox("Release Notes") {
-                    Text(appState.updater.releaseNotes)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 8)
-                }
-            }
-            Spacer()
-            HStack {
-                Spacer()
-                Button("Close") { appState.updateSheetPresented = false }
-            }
-        }
-        .padding(20)
-    }
-}
-
 struct MetricChartCard: View {
     let title: String
     let subtitle: String
     let history: [TimePoint]
     let color: Color
     let yLabel: String
+    let height: CGFloat
 
     var body: some View {
         GroupBox {
@@ -515,7 +485,7 @@ struct MetricChartCard: View {
                     .foregroundStyle(color)
                     .lineStyle(.init(lineWidth: 2))
                 }
-                .frame(height: 170)
+                .frame(height: max(110, height - 76))
             }
             .padding(.vertical, 8)
         }
@@ -524,6 +494,7 @@ struct MetricChartCard: View {
 
 struct BatteryCard: View {
     @EnvironmentObject private var appState: AppState
+    let height: CGFloat
 
     var body: some View {
         GroupBox {
@@ -539,6 +510,7 @@ struct BatteryCard: View {
             }
             .padding(.vertical, 8)
         }
+        .frame(maxHeight: height)
     }
 
     private func machineArchitecture() -> String {
