@@ -316,7 +316,7 @@ struct CPUChartCard: View {
     @EnvironmentObject private var appState: AppState
     let height: CGFloat
 
-    private struct CoreSeries: Identifiable {
+    struct CoreSeries: Identifiable {
         let id: Int
         let label: String
         let history: [TimePoint]
@@ -350,6 +350,21 @@ struct CPUChartCard: View {
         }
     }
 
+    private var perCoreColumns: [GridItem] {
+        let count = coreSeries.count
+        let columnCount: Int
+        switch count {
+        case 0 ... 4:
+            columnCount = 2
+        case 5 ... 8:
+            columnCount = 3
+        default:
+            columnCount = 4
+        }
+
+        return Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount)
+    }
+
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
@@ -364,21 +379,12 @@ struct CPUChartCard: View {
                     .foregroundStyle(.secondary)
 
                 if isPerCoreMode {
-                    Chart {
+                    LazyVGrid(columns: perCoreColumns, spacing: 8) {
                         ForEach(coreSeries) { series in
-                            ForEach(series.history) { point in
-                                LineMark(
-                                    x: .value("Time", point.timestamp),
-                                    y: .value("%", point.value)
-                                )
-                                .foregroundStyle(series.color.opacity(0.9))
-                                .lineStyle(.init(lineWidth: 1.5))
-                                .interpolationMethod(.catmullRom)
-                            }
+                            CoreMiniChartCard(series: series)
                         }
                     }
-                    .chartYScale(domain: 0 ... 100)
-                    .frame(height: max(110, height - 76))
+                    .frame(height: max(110, height - 76), alignment: .top)
                 } else {
                     Chart(appState.cpuHistory) { point in
                         AreaMark(
@@ -414,6 +420,51 @@ struct CPUChartCard: View {
             }
             .disabled(appState.perCoreCPUHistory.isEmpty)
         }
+    }
+}
+
+struct CoreMiniChartCard: View {
+    let series: CPUChartCard.CoreSeries
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(series.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Text(currentValue)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(series.color)
+            }
+
+            Chart(series.history) { point in
+                AreaMark(
+                    x: .value("Time", point.timestamp),
+                    y: .value("%", point.value)
+                )
+                .foregroundStyle(series.color.opacity(0.10))
+
+                LineMark(
+                    x: .value("Time", point.timestamp),
+                    y: .value("%", point.value)
+                )
+                .foregroundStyle(series.color)
+                .lineStyle(.init(lineWidth: 1.3))
+                .interpolationMethod(.catmullRom)
+            }
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartYScale(domain: 0 ... 100)
+            .frame(height: 46)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(series.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var currentValue: String {
+        String(format: "%.0f%%", series.history.last?.value ?? 0)
     }
 }
 
