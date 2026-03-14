@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.17"
-BUILD_NUMBER="117"
+VERSION="1.0.18"
+BUILD_NUMBER="118"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.17",
-  "build": 117,
-  "notes": "Remove the macOS access notes block from Settings and show the current app version above the update controls.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.17/TaskManagerPro-1.0.17-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.17/TaskManagerPro-1.0.17-intel.dmg"
+  "version": "1.0.18",
+  "build": 118,
+  "notes": "Center-align the two-line menu bar monitor layout for a cleaner status item appearance.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.18/TaskManagerPro-1.0.18-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.18/TaskManagerPro-1.0.18-intel.dmg"
 }
 JSON
 

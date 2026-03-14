@@ -77,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateStatusItemDisplay() {
-        guard let button = statusItem?.button else { return }
+        guard let button = statusItem?.button, let statusItem else { return }
 
         let mode = UserDefaults.standard.string(forKey: "menuBarDisplayMode").flatMap(MenuBarDisplayMode.init(rawValue:)) ?? .compact
         let cpuText = String(format: "%.0f%%", latestCPUPercent)
@@ -85,12 +85,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         switch mode {
         case .compact:
+            statusItem.length = NSStatusItem.variableLength
             button.attributedTitle = NSAttributedString(
                 string: "C \(cpuText) M \(memoryText)",
                 attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)]
             )
             button.image = nil
         case .twoLine:
+            statusItem.length = 54
             let paragraph = NSMutableParagraphStyle()
             paragraph.alignment = .center
             button.attributedTitle = NSAttributedString(
@@ -101,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 ]
             )
             button.image = nil
+            button.frame = NSRect(x: 0, y: 0, width: 54, height: button.frame.height)
         case .off:
             break
         }
