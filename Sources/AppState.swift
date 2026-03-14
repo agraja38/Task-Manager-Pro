@@ -63,6 +63,11 @@ final class AppState: ObservableObject {
             NotificationCenter.default.post(name: .pulseTaskPresentationPreferencesDidChange, object: nil, userInfo: ["showsDockIcon": showsDockIcon])
         }
     }
+    @Published var showsAdvancedTelemetryWidgets: Bool = UserDefaults.standard.object(forKey: "showsAdvancedTelemetryWidgets") as? Bool ?? false {
+        didSet {
+            UserDefaults.standard.set(showsAdvancedTelemetryWidgets, forKey: "showsAdvancedTelemetryWidgets")
+        }
+    }
 
     let updater = UpdaterService()
 

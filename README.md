@@ -2,9 +2,9 @@
 
 Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a clean top navigation layout, real-time charts, safe process controls, and a built-in updater.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.25/TaskManagerPro-1.0.25-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.26/TaskManagerPro-1.0.26-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.25/TaskManagerPro-1.0.25-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.26/TaskManagerPro-1.0.26-intel.dmg)
 
 ## Highlights
 
@@ -12,6 +12,7 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 - Safe `Quit`, `Terminate`, and `Force Quit` actions with warnings for critical macOS processes
 - Performance dashboard with live CPU, memory, disk, network, GPU fallback, battery, and thermal-state cards
 - Right-click the CPU widget to switch between overall CPU activity and a per-core grid of mini CPU graphs
+- Normal mode keeps the dashboard focused on CPU, memory, disk, and network, while advanced telemetry mode shows the extra GPU and Battery & System widgets
 - Search, sort, filter, dark mode, and resource-heavy highlighting
 - Menu bar live monitor with Off, Compact, and Two-Line display modes
 - Settings for Dock icon visibility and app appearance
@@ -23,6 +24,17 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 - Task Manager Pro uses public APIs first and falls back to safe alternatives when macOS restricts direct low-level telemetry.
 - GPU usage and exact temperature readings are limited on macOS without private APIs or elevated tools.
 - Some process terminations may still be denied by macOS if the current user does not own the target process or the process is protected.
+
+## Advanced Telemetry Helper
+
+For normal users, the Performance tab stays focused on CPU, memory, disk, and network. If you want richer GPU and thermal telemetry, Task Manager Pro can be paired with an optional privileged helper.
+
+To achieve that helper flow:
+
+1. Sign the main app and the helper target with the same Developer ID team.
+2. Install the helper with admin approval using a privileged XPC helper flow such as `SMAppService` or `SMJobBless`.
+3. Have the helper collect protected readings from tools like `powermetrics`, `ioreg`, or SMC/IOKit interfaces.
+4. Send the readings back to Task Manager Pro over XPC and keep the public-API fallback for users who do not install the helper.
 
 ## Updating
 

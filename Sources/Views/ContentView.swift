@@ -267,18 +267,37 @@ struct PerformanceView: View {
     var body: some View {
         GeometryReader { proxy in
             let availableHeight = max(proxy.size.height - 110, 560)
-            let cardHeight = max(170, (availableHeight - 36) / 3)
+            let advancedCardHeight = max(170, (availableHeight - 36) / 3)
+            let normalCPUHeight = max(250, min(availableHeight * 0.5, 320))
+            let normalSecondaryHeight = max(145, (availableHeight - normalCPUHeight - 36) / 2)
             VStack(alignment: .leading, spacing: 18) {
                 Text("Performance")
                     .font(.system(size: 28, weight: .bold))
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    CPUChartCard(height: cardHeight)
-                    MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: cardHeight)
-                    MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: cardHeight)
-                    MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: cardHeight)
-                    MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: cardHeight)
-                    BatteryCard(height: cardHeight)
+                if appState.showsAdvancedTelemetryWidgets {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
+                        CPUChartCard(height: advancedCardHeight, allowsCoreScrolling: true)
+                        MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: advancedCardHeight)
+                        MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: advancedCardHeight)
+                        MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: advancedCardHeight)
+                        MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: advancedCardHeight)
+                        BatteryCard(height: advancedCardHeight)
+                    }
+                } else {
+                    Grid(horizontalSpacing: 18, verticalSpacing: 18) {
+                        GridRow {
+                            CPUChartCard(height: normalCPUHeight, allowsCoreScrolling: false)
+                                .gridCellColumns(2)
+                        }
+                        GridRow {
+                            MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: normalSecondaryHeight)
+                            MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: normalSecondaryHeight)
+                        }
+                        GridRow {
+                            MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: normalSecondaryHeight)
+                                .gridCellColumns(2)
+                        }
+                    }
                 }
 
                 if !appState.alerts.isEmpty {
@@ -313,6 +332,7 @@ struct PerformanceView: View {
 struct CPUChartCard: View {
     @EnvironmentObject private var appState: AppState
     let height: CGFloat
+    let allowsCoreScrolling: Bool
 
     struct CoreSeries: Identifiable {
         let id: Int
@@ -333,17 +353,12 @@ struct CPUChartCard: View {
     }
 
     private var coreSeries: [CoreSeries] {
-        let palette: [Color] = [
-            .orange, .red, .yellow, .pink, .mint, .cyan, .blue, .purple,
-            .teal, .indigo, .green, .brown
-        ]
-
         return appState.perCoreCPUHistory.enumerated().map { index, history in
             CoreSeries(
                 id: index,
                 label: "Core \(index + 1)",
                 history: history,
-                color: palette[index % palette.count]
+                color: .red
             )
         }
     }
@@ -377,13 +392,14 @@ struct CPUChartCard: View {
                     .foregroundStyle(.secondary)
 
                 if isPerCoreMode {
-                    ScrollView(.vertical, showsIndicators: true) {
-                        LazyVGrid(columns: perCoreColumns, spacing: 8) {
-                            ForEach(coreSeries) { series in
-                                CoreMiniChartCard(series: series)
+                    Group {
+                        if allowsCoreScrolling {
+                            ScrollView(.vertical, showsIndicators: true) {
+                                coreGrid
                             }
+                        } else {
+                            coreGrid
                         }
-                        .padding(.trailing, 4)
                     }
                     .frame(height: max(110, height - 76), alignment: .top)
                 } else {
@@ -421,6 +437,15 @@ struct CPUChartCard: View {
             }
             .disabled(appState.perCoreCPUHistory.isEmpty)
         }
+    }
+
+    private var coreGrid: some View {
+        LazyVGrid(columns: perCoreColumns, spacing: 8) {
+            ForEach(coreSeries) { series in
+                CoreMiniChartCard(series: series)
+                            }
+        }
+        .padding(.trailing, allowsCoreScrolling ? 4 : 0)
     }
 }
 
@@ -498,6 +523,27 @@ struct SettingsView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Advanced Telemetry Helper") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle("Show advanced telemetry widgets", isOn: $appState.showsAdvancedTelemetryWidgets)
+
+                        Text("Turn this on after you set up a privileged helper. Normal mode keeps the dashboard focused on CPU, memory, disk, and network, while advanced mode also shows the GPU and Battery & System widgets.")
+                            .foregroundStyle(.secondary)
+
+                        Text("To achieve deeper GPU and thermal telemetry:")
+                            .font(.headline)
+                        Text("1. Sign Task Manager Pro and a helper target with the same Developer ID team.")
+                            .foregroundStyle(.secondary)
+                        Text("2. Install the helper with admin approval using a privileged XPC helper flow such as `SMAppService` or `SMJobBless`.")
+                            .foregroundStyle(.secondary)
+                        Text("3. Let that helper collect protected readings from `powermetrics`, `ioreg`, or SMC/IOKit interfaces and expose the results back to the app over XPC.")
+                            .foregroundStyle(.secondary)
+                        Text("4. Keep the public-API fallback in place so normal users can run the app safely without the helper.")
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
                 }

@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.25"
-BUILD_NUMBER="125"
+VERSION="1.0.26"
+BUILD_NUMBER="126"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.25",
-  "build": 125,
-  "notes": "Restore the fixed Performance dashboard layout and make the per-core CPU widget scroll so lower core graphs stay accessible.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.25/TaskManagerPro-1.0.25-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.25/TaskManagerPro-1.0.25-intel.dmg"
+  "version": "1.0.26",
+  "build": 126,
+  "notes": "Add an advanced telemetry layout toggle, keep the normal dashboard focused on core metrics, and make per-core CPU charts use a unified red style.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.26/TaskManagerPro-1.0.26-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.26/TaskManagerPro-1.0.26-intel.dmg"
 }
 JSON
 
