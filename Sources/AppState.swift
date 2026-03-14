@@ -14,6 +14,17 @@ final class AppState: ObservableObject {
     @Published var processFilter: ProcessFilter = .appsOnly
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
+    @Published var visiblePerformanceWidgets: [PerformanceWidgetKind] = AppState.loadVisiblePerformanceWidgets() {
+        didSet {
+            UserDefaults.standard.set(visiblePerformanceWidgets.map(\.rawValue), forKey: "visiblePerformanceWidgets")
+        }
+    }
+    @Published var performanceWidgetSizes: [PerformanceWidgetKind: PerformanceWidgetSize] = AppState.loadPerformanceWidgetSizes() {
+        didSet {
+            let rawMap = Dictionary(uniqueKeysWithValues: performanceWidgetSizes.map { ($0.key.rawValue, $0.value.rawValue) })
+            UserDefaults.standard.set(rawMap, forKey: "performanceWidgetSizes")
+        }
+    }
     @Published var selectedPID: Int32?
     @Published var processes: [ProcessSnapshot] = []
     @Published var alerts: [AlertItem] = []
@@ -254,5 +265,51 @@ final class AppState: ObservableObject {
         if !newAlerts.isEmpty {
             alerts = Array((newAlerts + alerts).prefix(12))
         }
+    }
+
+    func widgetSize(for widget: PerformanceWidgetKind) -> PerformanceWidgetSize {
+        performanceWidgetSizes[widget] ?? .regular
+    }
+
+    func setWidgetSize(_ size: PerformanceWidgetSize, for widget: PerformanceWidgetKind) {
+        performanceWidgetSizes[widget] = size
+    }
+
+    func removeWidget(_ widget: PerformanceWidgetKind) {
+        visiblePerformanceWidgets.removeAll { $0 == widget }
+    }
+
+    func addWidget(_ widget: PerformanceWidgetKind) {
+        guard !visiblePerformanceWidgets.contains(widget) else { return }
+        visiblePerformanceWidgets.append(widget)
+    }
+
+    var hiddenPerformanceWidgets: [PerformanceWidgetKind] {
+        PerformanceWidgetKind.allCases.filter { !visiblePerformanceWidgets.contains($0) }
+    }
+
+    private static func loadVisiblePerformanceWidgets() -> [PerformanceWidgetKind] {
+        guard let saved = UserDefaults.standard.array(forKey: "visiblePerformanceWidgets") as? [String] else {
+            return PerformanceWidgetKind.allCases
+        }
+
+        let widgets = saved.compactMap(PerformanceWidgetKind.init(rawValue:))
+        return widgets.isEmpty ? PerformanceWidgetKind.allCases : widgets
+    }
+
+    private static func loadPerformanceWidgetSizes() -> [PerformanceWidgetKind: PerformanceWidgetSize] {
+        guard let saved = UserDefaults.standard.dictionary(forKey: "performanceWidgetSizes") as? [String: String] else {
+            return [:]
+        }
+
+        var sizes: [PerformanceWidgetKind: PerformanceWidgetSize] = [:]
+        for (key, value) in saved {
+            guard
+                let widget = PerformanceWidgetKind(rawValue: key),
+                let size = PerformanceWidgetSize(rawValue: value)
+            else { continue }
+            sizes[widget] = size
+        }
+        return sizes
     }
 }

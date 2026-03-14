@@ -1,7 +1,7 @@
 {
-  "version": "1.0.23",
-  "build": 123,
-  "notes": "Show each CPU core in its own mini graph inside the CPU widget when you switch to the per-core mode.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.23/TaskManagerPro-1.0.23-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.23/TaskManagerPro-1.0.23-intel.dmg"
+  "version": "1.0.24",
+  "build": 124,
+  "notes": "Make the Performance tab customizable so widgets can be added back, removed, and resized, and simplify the Processes header.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.24/TaskManagerPro-1.0.24-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.24/TaskManagerPro-1.0.24-intel.dmg"
 }
