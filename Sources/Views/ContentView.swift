@@ -118,8 +118,10 @@ struct ProcessesView: View {
 
     private var footer: some View {
         HStack {
-            Text(appState.latestError.isEmpty ? "Ready." : appState.latestError)
-                .foregroundStyle(appState.latestError.contains("blocked") ? .red : .secondary)
+            if !appState.latestError.isEmpty {
+                Text(appState.latestError)
+                    .foregroundStyle(appState.latestError.contains("blocked") ? .red : .secondary)
+            }
             Spacer()
             Text("\(appState.filteredProcesses.count) visible processes")
                 .foregroundStyle(.secondary)

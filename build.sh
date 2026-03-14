@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.20"
-BUILD_NUMBER="120"
+VERSION="1.0.21"
+BUILD_NUMBER="121"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.20",
-  "build": 120,
-  "notes": "Keep the main window alive when closed so the menu bar can reopen it reliably, while preserving the centered two-line menu bar monitor layout.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.20/TaskManagerPro-1.0.20-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.20/TaskManagerPro-1.0.20-intel.dmg"
+  "version": "1.0.21",
+  "build": 121,
+  "notes": "Remove the idle Ready text from the process footer while keeping actual error messages visible when needed.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.21/TaskManagerPro-1.0.21-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.21/TaskManagerPro-1.0.21-intel.dmg"
 }
 JSON
 
