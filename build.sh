@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.21"
-BUILD_NUMBER="121"
+VERSION="1.0.22"
+BUILD_NUMBER="122"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.21",
-  "build": 121,
-  "notes": "Remove the idle Ready text from the process footer while keeping actual error messages visible when needed.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.21/TaskManagerPro-1.0.21-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.21/TaskManagerPro-1.0.21-intel.dmg"
+  "version": "1.0.22",
+  "build": 122,
+  "notes": "Add a right-click CPU widget mode switch so you can swap between the overall usage graph and a per-core CPU graph.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.22/TaskManagerPro-1.0.22-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.22/TaskManagerPro-1.0.22-intel.dmg"
 }
 JSON
 

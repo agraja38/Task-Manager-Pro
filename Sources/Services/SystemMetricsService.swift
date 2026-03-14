@@ -3,6 +3,11 @@ import Foundation
 import IOKit.ps
 
 final class SystemMetricsService {
+    private struct CPUSnapshot {
+        let overallPercent: Double
+        let perCorePercent: [Double]
+    }
+
     private var previousCPUInfo: processor_info_array_t?
     private var previousCPUInfoCount: mach_msg_type_number_t = 0
     private var previousNetworkTotals: (input: UInt64, output: UInt64)?
@@ -10,7 +15,7 @@ final class SystemMetricsService {
     private var previousDiskTimestamp: Date?
 
     func sample() -> PerformanceSnapshot {
-        let cpuPercent = currentCPUPercent()
+        let cpu = currentCPUPercent()
         let memory = currentMemory()
         let network = currentNetwork()
         let disk = currentDisk()
@@ -18,7 +23,8 @@ final class SystemMetricsService {
         let thermal = currentThermalLevel()
 
         return PerformanceSnapshot(
-            cpuPercent: cpuPercent,
+            cpuPercent: cpu.overallPercent,
+            perCoreCPUPercent: cpu.perCorePercent,
             memoryPercent: memory.percent,
             usedMemoryGB: memory.usedGB,
             totalMemoryGB: memory.totalGB,
@@ -34,12 +40,14 @@ final class SystemMetricsService {
         )
     }
 
-    private func currentCPUPercent() -> Double {
+    private func currentCPUPercent() -> CPUSnapshot {
         var numCPUs: natural_t = 0
         var cpuInfo: processor_info_array_t?
         var cpuInfoCount: mach_msg_type_number_t = 0
         let result = host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &numCPUs, &cpuInfo, &cpuInfoCount)
-        guard result == KERN_SUCCESS, let cpuInfo else { return 0 }
+        guard result == KERN_SUCCESS, let cpuInfo else {
+            return CPUSnapshot(overallPercent: 0, perCorePercent: [])
+        }
 
         defer {
             if let previousCPUInfo {
@@ -49,10 +57,16 @@ final class SystemMetricsService {
             previousCPUInfoCount = cpuInfoCount
         }
 
-        guard let previousCPUInfo else { return 0 }
+        guard let previousCPUInfo else {
+            return CPUSnapshot(
+                overallPercent: 0,
+                perCorePercent: Array(repeating: 0, count: Int(numCPUs))
+            )
+        }
 
         var totalInUse: UInt32 = 0
         var totalTicks: UInt32 = 0
+        var perCorePercent: [Double] = []
 
         for cpu in 0 ..< Int(numCPUs) {
             let base = cpu * Int(CPU_STATE_MAX)
@@ -64,10 +78,19 @@ final class SystemMetricsService {
 
             totalInUse += user + system + nice
             totalTicks += user + system + nice + idle
+
+            let coreTicks = user + system + nice + idle
+            let percent = coreTicks > 0 ? (Double(user + system + nice) / Double(coreTicks)) * 100 : 0
+            perCorePercent.append(percent)
         }
 
-        guard totalTicks > 0 else { return 0 }
-        return (Double(totalInUse) / Double(totalTicks)) * 100
+        guard totalTicks > 0 else {
+            return CPUSnapshot(overallPercent: 0, perCorePercent: perCorePercent)
+        }
+        return CPUSnapshot(
+            overallPercent: (Double(totalInUse) / Double(totalTicks)) * 100,
+            perCorePercent: perCorePercent
+        )
     }
 
     private func currentMemory() -> (percent: Double, usedGB: Double, totalGB: Double) {

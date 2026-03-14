@@ -275,7 +275,7 @@ struct PerformanceView: View {
                     .font(.system(size: 28, weight: .bold))
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    MetricChartCard(title: "CPU", subtitle: String(format: "%.1f%% active", appState.currentMetrics.cpuPercent), history: appState.cpuHistory, color: .orange, yLabel: "%", height: cardHeight)
+                    CPUChartCard(height: cardHeight)
                     MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: cardHeight)
                     MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: cardHeight)
                     MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: cardHeight)
@@ -308,6 +308,111 @@ struct PerformanceView: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+}
+
+struct CPUChartCard: View {
+    @EnvironmentObject private var appState: AppState
+    let height: CGFloat
+
+    private struct CoreSeries: Identifiable {
+        let id: Int
+        let label: String
+        let history: [TimePoint]
+        let color: Color
+    }
+
+    private var isPerCoreMode: Bool {
+        appState.cpuGraphMode == .cores && !appState.perCoreCPUHistory.isEmpty
+    }
+
+    private var subtitle: String {
+        if isPerCoreMode {
+            return "\(appState.perCoreCPUHistory.count) cores • \(String(format: "%.1f%% overall", appState.currentMetrics.cpuPercent))"
+        }
+        return String(format: "%.1f%% active", appState.currentMetrics.cpuPercent)
+    }
+
+    private var coreSeries: [CoreSeries] {
+        let palette: [Color] = [
+            .orange, .red, .yellow, .pink, .mint, .cyan, .blue, .purple,
+            .teal, .indigo, .green, .brown
+        ]
+
+        return appState.perCoreCPUHistory.enumerated().map { index, history in
+            CoreSeries(
+                id: index,
+                label: "Core \(index + 1)",
+                history: history,
+                color: palette[index % palette.count]
+            )
+        }
+    }
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("CPU").font(.headline)
+                    Spacer()
+                    Text(appState.cpuGraphMode.rawValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                Text(subtitle)
+                    .foregroundStyle(.secondary)
+
+                if isPerCoreMode {
+                    Chart {
+                        ForEach(coreSeries) { series in
+                            ForEach(series.history) { point in
+                                LineMark(
+                                    x: .value("Time", point.timestamp),
+                                    y: .value("%", point.value)
+                                )
+                                .foregroundStyle(series.color.opacity(0.9))
+                                .lineStyle(.init(lineWidth: 1.5))
+                                .interpolationMethod(.catmullRom)
+                            }
+                        }
+                    }
+                    .chartYScale(domain: 0 ... 100)
+                    .frame(height: max(110, height - 76))
+                } else {
+                    Chart(appState.cpuHistory) { point in
+                        AreaMark(
+                            x: .value("Time", point.timestamp),
+                            y: .value("%", point.value)
+                        )
+                        .foregroundStyle(Color.orange.opacity(0.12))
+
+                        LineMark(
+                            x: .value("Time", point.timestamp),
+                            y: .value("%", point.value)
+                        )
+                        .foregroundStyle(Color.orange)
+                        .lineStyle(.init(lineWidth: 2))
+                    }
+                    .chartYScale(domain: 0 ... 100)
+                    .frame(height: max(110, height - 76))
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        .contextMenu {
+            Button {
+                appState.cpuGraphMode = .overall
+            } label: {
+                Label("Show Overall Graph", systemImage: appState.cpuGraphMode == .overall ? "checkmark" : "waveform")
+            }
+
+            Button {
+                appState.cpuGraphMode = .cores
+            } label: {
+                Label("Show CPU Cores Graph", systemImage: appState.cpuGraphMode == .cores ? "checkmark" : "square.grid.2x2")
+            }
+            .disabled(appState.perCoreCPUHistory.isEmpty)
         }
     }
 }

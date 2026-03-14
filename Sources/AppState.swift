@@ -6,6 +6,11 @@ final class AppState: ObservableObject {
     static let shared = AppState()
 
     @Published var selectedSection: TopSection = .processes
+    @Published var cpuGraphMode: CPUGraphMode = UserDefaults.standard.string(forKey: "cpuGraphMode").flatMap(CPUGraphMode.init(rawValue:)) ?? .overall {
+        didSet {
+            UserDefaults.standard.set(cpuGraphMode.rawValue, forKey: "cpuGraphMode")
+        }
+    }
     @Published var processFilter: ProcessFilter = .appsOnly
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
@@ -15,6 +20,7 @@ final class AppState: ObservableObject {
     @Published var latestError = ""
     @Published var currentMetrics = PerformanceSnapshot(
         cpuPercent: 0,
+        perCoreCPUPercent: [],
         memoryPercent: 0,
         usedMemoryGB: 0,
         totalMemoryGB: 0,
@@ -29,6 +35,7 @@ final class AppState: ObservableObject {
         note: ""
     )
     @Published var cpuHistory: [TimePoint] = []
+    @Published var perCoreCPUHistory: [[TimePoint]] = []
     @Published var memoryHistory: [TimePoint] = []
     @Published var diskHistory: [TimePoint] = []
     @Published var networkHistory: [TimePoint] = []
@@ -194,6 +201,7 @@ final class AppState: ObservableObject {
     private func appendHistory(snapshot: PerformanceSnapshot, processes: [ProcessSnapshot]) {
         let now = Date()
         cpuHistory = trimmed(cpuHistory + [TimePoint(timestamp: now, value: snapshot.cpuPercent)])
+        syncPerCoreHistory(with: snapshot.perCoreCPUPercent, timestamp: now)
         memoryHistory = trimmed(memoryHistory + [TimePoint(timestamp: now, value: snapshot.memoryPercent)])
         diskHistory = trimmed(diskHistory + [TimePoint(timestamp: now, value: snapshot.diskReadMBps + snapshot.diskWriteMBps)])
         networkHistory = trimmed(networkHistory + [TimePoint(timestamp: now, value: snapshot.networkInKBps + snapshot.networkOutKBps)])
@@ -202,6 +210,21 @@ final class AppState: ObservableObject {
         for process in processes.prefix(20) {
             processHistory[process.pid] = trimmed((processHistory[process.pid] ?? []) + [TimePoint(timestamp: now, value: process.cpuUsage)])
             memoryProcessHistory[process.pid] = trimmed((memoryProcessHistory[process.pid] ?? []) + [TimePoint(timestamp: now, value: process.memoryMB)])
+        }
+    }
+
+    private func syncPerCoreHistory(with samples: [Double], timestamp: Date) {
+        guard !samples.isEmpty else {
+            perCoreCPUHistory = []
+            return
+        }
+
+        if perCoreCPUHistory.count != samples.count {
+            perCoreCPUHistory = Array(repeating: [], count: samples.count)
+        }
+
+        for (index, sample) in samples.enumerated() {
+            perCoreCPUHistory[index] = trimmed(perCoreCPUHistory[index] + [TimePoint(timestamp: timestamp, value: sample)])
         }
     }
 

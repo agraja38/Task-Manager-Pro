@@ -31,6 +31,13 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum CPUGraphMode: String, CaseIterable, Identifiable {
+    case overall = "Overall"
+    case cores = "CPU Cores"
+
+    var id: String { rawValue }
+}
+
 enum ProcessFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case appsOnly = "Apps Only"
@@ -105,6 +112,7 @@ struct TimePoint: Identifiable, Hashable {
 
 struct PerformanceSnapshot {
     let cpuPercent: Double
+    let perCoreCPUPercent: [Double]
     let memoryPercent: Double
     let usedMemoryGB: Double
     let totalMemoryGB: Double
