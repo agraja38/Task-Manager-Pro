@@ -122,15 +122,15 @@ final class AppState: ObservableObject {
 
     func execute(_ action: ProcessAction, for process: ProcessSnapshot) {
         if process.isCritical {
-            latestError = "PulseTask Manager blocked the action because \(process.name) looks critical to macOS."
+            latestError = "Task Manager Pro blocked the action because \(process.name) looks critical to macOS."
             return
         }
 
         let alert = NSAlert()
         alert.messageText = "\(action.rawValue) \(process.name)?"
         alert.informativeText = process.isApp
-            ? "PulseTask Manager will ask macOS to \(action.rawValue.lowercased()) this app."
-            : "PulseTask Manager will send a Unix signal to PID \(process.pid)."
+            ? "Task Manager Pro will ask macOS to \(action.rawValue.lowercased()) this app."
+            : "Task Manager Pro will send a Unix signal to PID \(process.pid)."
         alert.alertStyle = action == .forceQuit ? .warning : .informational
         alert.addButton(withTitle: action.rawValue)
         alert.addButton(withTitle: "Cancel")

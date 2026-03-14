@@ -101,12 +101,12 @@ final class ProcessMonitorService {
 
     func perform(_ action: ProcessAction, on process: ProcessSnapshot) throws {
         guard !process.isCritical else {
-            throw NSError(domain: "PulseTaskManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "PulseTask Manager blocked the action because this looks like a critical macOS process."])
+            throw NSError(domain: "TaskManagerPro", code: 1, userInfo: [NSLocalizedDescriptionKey: "Task Manager Pro blocked the action because this looks like a critical macOS process."])
         }
 
         if action == .quit, let app = NSWorkspace.shared.runningApplications.first(where: { $0.processIdentifier == process.pid }) {
             if !app.terminate() {
-                throw NSError(domain: "PulseTaskManager", code: 2, userInfo: [NSLocalizedDescriptionKey: "The app refused to quit normally."])
+                throw NSError(domain: "TaskManagerPro", code: 2, userInfo: [NSLocalizedDescriptionKey: "The app refused to quit normally."])
             }
             return
         }

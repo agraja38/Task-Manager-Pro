@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APP_NAME="PulseTaskManager"
-DISPLAY_NAME="PulseTask Manager"
+APP_NAME="TaskManagerPro"
+DISPLAY_NAME="Task Manager Pro"
 APP_DIR="$ROOT_DIR/${DISPLAY_NAME}.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
@@ -48,8 +48,8 @@ cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
   "version": "1.0.0",
   "build": 1,
-  "notes": "Initial release of PulseTask Manager.",
-  "assetURL": "https://github.com/agraja38/pulse-task-manager-macos/releases/download/v1.0.0/PulseTaskManager-1.0.0.zip"
+  "notes": "Initial release of Task Manager Pro.",
+  "assetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.0/TaskManagerPro-1.0.0.zip"
 }
 JSON
 

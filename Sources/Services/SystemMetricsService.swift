@@ -30,7 +30,7 @@ final class SystemMetricsService {
             batteryPercent: battery.percent,
             isCharging: battery.isCharging,
             thermalLevel: thermal,
-            note: "GPU and temperature telemetry are limited on macOS without private APIs or elevated tools, so PulseTask Manager shows safe alternatives when direct readings are unavailable."
+            note: "GPU and temperature telemetry are limited on macOS without private APIs or elevated tools, so Task Manager Pro shows safe alternatives when direct readings are unavailable."
         )
     }
 

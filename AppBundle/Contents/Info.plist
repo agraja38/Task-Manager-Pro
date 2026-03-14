@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>PulseTask Manager</string>
+	<string>Task Manager Pro</string>
 	<key>CFBundleExecutable</key>
-	<string>PulseTaskManager</string>
+	<string>TaskManagerPro</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.agraja.pulsetaskmanager</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>PulseTaskManager</string>
+	<string>TaskManagerPro</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -25,7 +25,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>PulseTask Manager can inspect login items when you choose the Startup Apps tab.</string>
+	<string>Task Manager Pro can inspect login items when you choose the Startup Apps tab.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright 2026 Agraja</string>
 	<key>NSPrincipalClass</key>

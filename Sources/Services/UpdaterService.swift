@@ -50,7 +50,7 @@ final class UpdaterService: ObservableObject {
 
     private func downloadAndInstall(from assetURLString: String) async throws {
         guard let url = URL(string: assetURLString) else {
-            throw NSError(domain: "PulseTaskManager", code: 10, userInfo: [NSLocalizedDescriptionKey: "The update feed returned an invalid download URL."])
+            throw NSError(domain: "TaskManagerPro", code: 10, userInfo: [NSLocalizedDescriptionKey: "The update feed returned an invalid download URL."])
         }
 
         phase = .downloading

@@ -451,7 +451,7 @@ struct SettingsView: View {
 
                 GroupBox("Updater") {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("PulseTask Manager includes a built-in updater that checks a GitHub-hosted JSON feed, downloads the latest build, and shows progress while downloading and opening the installer.")
+                        Text("Task Manager Pro includes a built-in updater that checks a GitHub-hosted JSON feed, downloads the latest build, and shows progress while downloading and opening the installer.")
                             .foregroundStyle(.secondary)
                         Button("Check for Updates Now") { appState.startUpdateFlow() }
                     }
@@ -461,7 +461,7 @@ struct SettingsView: View {
                 GroupBox("macOS Access Notes") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Some metrics are intentionally restricted by macOS. GPU usage, package energy impact, temperatures, and certain startup/background items may need private APIs, root tools, or user-granted permissions.")
-                        Text("PulseTask Manager stays on the safe side: it uses public APIs first, warns before destructive actions, and falls back to best-effort alternatives when direct telemetry is unavailable.")
+                        Text("Task Manager Pro stays on the safe side: it uses public APIs first, warns before destructive actions, and falls back to best-effort alternatives when direct telemetry is unavailable.")
                     }
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
