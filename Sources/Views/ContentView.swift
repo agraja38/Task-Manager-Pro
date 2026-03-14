@@ -363,6 +363,9 @@ struct SettingsView: View {
 
                 GroupBox("Updater") {
                     VStack(alignment: .leading, spacing: 10) {
+                        Text("Current version \(appState.updater.currentVersion)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
                         HStack(spacing: 12) {
                             Button("Check for Updates Now") { appState.startUpdateFlow() }
                             if appState.updater.phase == .ready {
@@ -374,15 +377,6 @@ struct SettingsView: View {
                                 .lineLimit(2)
                         }
                     }
-                    .padding(.vertical, 8)
-                }
-
-                GroupBox("macOS Access Notes") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Some metrics are intentionally restricted by macOS. GPU usage, package energy impact, and temperatures may need private APIs, root tools, or user-granted permissions.")
-                        Text("Task Manager Pro stays on the safe side: it uses public APIs first, warns before destructive actions, and falls back to best-effort alternatives when direct telemetry is unavailable.")
-                    }
-                    .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
                 }
             }
