@@ -53,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func checkForUpdates() {
-        Task { await AppState.shared.updater.checkForUpdates(force: true) }
+        Task { await AppState.shared.updater.checkForUpdates() }
         openMainWindow()
     }
 

@@ -19,12 +19,6 @@ enum SidebarSection: String, CaseIterable, Identifiable {
     }
 }
 
-enum DisplayMode: String, CaseIterable, Identifiable {
-    case beginner = "Beginner"
-    case advanced = "Advanced"
-    var id: String { rawValue }
-}
-
 enum ProcessFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case appsOnly = "Apps Only"
@@ -118,7 +112,8 @@ struct UpdateFeed: Decodable {
     let version: String
     let build: Int
     let notes: String
-    let assetURL: String
+    let arm64AssetURL: String
+    let x86_64AssetURL: String
 }
 
 extension Notification.Name {

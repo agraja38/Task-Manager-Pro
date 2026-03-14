@@ -6,7 +6,6 @@ final class AppState: ObservableObject {
     static let shared = AppState()
 
     @Published var sidebarSelection: SidebarSection? = .processes
-    @Published var displayMode: DisplayMode = .advanced
     @Published var processFilter: ProcessFilter = .all
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
@@ -94,12 +93,13 @@ final class AppState: ObservableObject {
     }
 
     func refreshAll() {
+        let runningApps = NSWorkspace.shared.runningApplications
         let processService = self.processService
         let metricsService = self.metricsService
         let startupService = self.startupService
 
         Task.detached(priority: .userInitiated) {
-            let processes = processService.fetchProcesses()
+            let processes = processService.fetchProcesses(runningApplications: runningApps)
             let metrics = metricsService.sample()
             let startupItems = startupService.fetchStartupItems()
 
@@ -109,8 +109,12 @@ final class AppState: ObservableObject {
                 self.currentMetrics = metrics
                 self.appendHistory(snapshot: metrics, processes: processes)
                 self.raiseAlertsIfNeeded(processes: processes, metrics: metrics)
-                self.latestError = ""
-                if self.selectedPID == nil {
+                if processes.isEmpty {
+                    self.latestError = "Task Manager Pro could not load the process list. Try refreshing again."
+                } else if self.latestError.contains("could not load") {
+                    self.latestError = ""
+                }
+                if self.selectedPID == nil || !processes.contains(where: { $0.pid == self.selectedPID }) {
                     self.selectedPID = self.filteredProcesses.first?.pid
                 }
 
@@ -146,18 +150,9 @@ final class AppState: ObservableObject {
         }
     }
 
-    func exportSnapshot(asJSON: Bool) {
-        do {
-            try ExportService.export(processes: filteredProcesses, metrics: currentMetrics, asJSON: asJSON)
-            latestError = "Snapshot exported."
-        } catch {
-            latestError = "Export failed: \(error.localizedDescription)"
-        }
-    }
-
     func startUpdateFlow() {
         updateSheetPresented = true
-        Task { await updater.checkForUpdates(force: true) }
+        Task { await updater.checkForUpdates() }
     }
 
     private func startTimers() {

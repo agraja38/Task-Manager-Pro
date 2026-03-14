@@ -4,21 +4,23 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
-APP_DIR="$ROOT_DIR/${DISPLAY_NAME}.app"
-CONTENTS_DIR="$APP_DIR/Contents"
-MACOS_DIR="$CONTENTS_DIR/MacOS"
-RESOURCES_DIR="$CONTENTS_DIR/Resources"
 DIST_DIR="$ROOT_DIR/dist"
+VERSION="1.0.01"
+BUILD_NUMBER="101"
 ARM_BIN="$DIST_DIR/${APP_NAME}-arm64"
 X64_BIN="$DIST_DIR/${APP_NAME}-x86_64"
-UNIVERSAL_BIN="$MACOS_DIR/$APP_NAME"
-ZIP_PATH="$DIST_DIR/${APP_NAME}-1.0.0.zip"
-DMG_PATH="$DIST_DIR/${APP_NAME}-1.0.0.dmg"
-STAGING_DIR="$DIST_DIR/dmg-staging"
+ICONSET_DIR="$ROOT_DIR/${APP_NAME}.iconset"
+ICNS_PATH="$DIST_DIR/${APP_NAME}.icns"
+APPLE_SILICON_DIR="$DIST_DIR/apple-silicon"
+INTEL_DIR="$DIST_DIR/intel"
+APPLE_SILICON_APP="$APPLE_SILICON_DIR/${DISPLAY_NAME}.app"
+INTEL_APP="$INTEL_DIR/${DISPLAY_NAME}.app"
+APPLE_SILICON_ZIP="$DIST_DIR/${APP_NAME}-${VERSION}-apple-silicon.zip"
+INTEL_ZIP="$DIST_DIR/${APP_NAME}-${VERSION}-intel.zip"
+HOST_APP="$ROOT_DIR/${DISPLAY_NAME}.app"
 
-rm -rf "$APP_DIR" "$DIST_DIR"
-mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$DIST_DIR"
-cp "$ROOT_DIR/AppBundle/Contents/Info.plist" "$CONTENTS_DIR/Info.plist"
+rm -rf "$DIST_DIR" "$HOST_APP" "$ICONSET_DIR"
+mkdir -p "$DIST_DIR"
 
 COMMON_FLAGS=(
   -parse-as-library
@@ -31,28 +33,48 @@ COMMON_FLAGS=(
 
 SOURCE_FILES=("${(@f)$(find "$ROOT_DIR/Sources" -name '*.swift' -print | sort)}")
 
+swift "$ROOT_DIR/generate_icon.swift"
+iconutil -c icns "$ICONSET_DIR" -o "$ICNS_PATH"
+
 swiftc -target arm64-apple-macos13.0 "${COMMON_FLAGS[@]}" "${SOURCE_FILES[@]}" -o "$ARM_BIN"
 swiftc -target x86_64-apple-macos13.0 "${COMMON_FLAGS[@]}" "${SOURCE_FILES[@]}" -o "$X64_BIN"
-lipo -create "$ARM_BIN" "$X64_BIN" -output "$UNIVERSAL_BIN"
-chmod +x "$UNIVERSAL_BIN"
 
-ditto -c -k --keepParent "$APP_DIR" "$ZIP_PATH"
+create_app_bundle() {
+  local bin_path="$1"
+  local app_path="$2"
+  local contents_dir="$app_path/Contents"
+  local macos_dir="$contents_dir/MacOS"
+  local resources_dir="$contents_dir/Resources"
 
-mkdir -p "$STAGING_DIR"
-cp -R "$APP_DIR" "$STAGING_DIR/"
-ln -s /Applications "$STAGING_DIR/Applications"
-hdiutil create -volname "$DISPLAY_NAME" -srcfolder "$STAGING_DIR" -ov -format UDZO "$DMG_PATH" >/dev/null
-rm -rf "$STAGING_DIR"
+  mkdir -p "$macos_dir" "$resources_dir"
+  cp "$ROOT_DIR/AppBundle/Contents/Info.plist" "$contents_dir/Info.plist"
+  cp "$bin_path" "$macos_dir/$APP_NAME"
+  chmod +x "$macos_dir/$APP_NAME"
+  cp "$ICNS_PATH" "$resources_dir/${APP_NAME}.icns"
+}
+
+create_app_bundle "$ARM_BIN" "$APPLE_SILICON_APP"
+create_app_bundle "$X64_BIN" "$INTEL_APP"
+
+ditto -c -k --keepParent --norsrc "$APPLE_SILICON_APP" "$APPLE_SILICON_ZIP"
+ditto -c -k --keepParent --norsrc "$INTEL_APP" "$INTEL_ZIP"
+
+if [[ "$(uname -m)" == "arm64" ]]; then
+  cp -R "$APPLE_SILICON_APP" "$HOST_APP"
+else
+  cp -R "$INTEL_APP" "$HOST_APP"
+fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.0",
-  "build": 1,
-  "notes": "Initial release of Task Manager Pro.",
-  "assetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.0/TaskManagerPro-1.0.0.zip"
+  "version": "1.0.01",
+  "build": 101,
+  "notes": "Fix live process loading, streamline the interface, improve updater behavior, and ship separate Apple Silicon and Intel downloads with the new icon.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.01/TaskManagerPro-1.0.01-apple-silicon.zip",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.01/TaskManagerPro-1.0.01-intel.zip"
 }
 JSON
 
-echo "Built app: $APP_DIR"
-echo "Built zip: $ZIP_PATH"
-echo "Built dmg: $DMG_PATH"
+echo "Built host app: $HOST_APP"
+echo "Built Apple Silicon zip: $APPLE_SILICON_ZIP"
+echo "Built Intel zip: $INTEL_ZIP"

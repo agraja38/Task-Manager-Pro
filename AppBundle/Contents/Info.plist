@@ -8,6 +8,8 @@
 	<string>Task Manager Pro</string>
 	<key>CFBundleExecutable</key>
 	<string>TaskManagerPro</string>
+	<key>CFBundleIconFile</key>
+	<string>TaskManagerPro</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.agraja.pulsetaskmanager</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -17,9 +19,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.0.01</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>101</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>

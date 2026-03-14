@@ -15,32 +15,40 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.0"
+    @Published var latestVersion = "1.0.01"
     @Published var releaseNotes = ""
+    @Published var currentVersion = "1.0.01"
 
-    private var downloadTask: URLSessionDownloadTask?
-    private let currentVersion = "1.0.0"
-    private let feedURL = URL(string: "https://raw.githubusercontent.com/agraja38/pulse-task-manager-macos/main/docs/update.json")!
+    private let feedURL = URL(string: "https://raw.githubusercontent.com/agraja38/Task-Manager-Pro/main/docs/update.json")!
 
-    func checkForUpdates(force: Bool = false) async {
+    func checkForUpdates() async {
         phase = .checking
         progress = 0.1
         statusText = "Checking for updates..."
+        releaseNotes = ""
 
         do {
-            let (data, _) = try await URLSession.shared.data(from: feedURL)
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 15
+            configuration.timeoutIntervalForResource = 30
+            let session = URLSession(configuration: configuration)
+            let (data, response) = try await session.data(from: feedURL)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                throw NSError(domain: "TaskManagerPro", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "The update feed returned HTTP \(http.statusCode)."])
+            }
             let feed = try JSONDecoder().decode(UpdateFeed.self, from: data)
             latestVersion = feed.version
             releaseNotes = feed.notes
 
-            guard force || feed.version.compare(currentVersion, options: .numeric) == .orderedDescending else {
+            guard feed.version.compare(currentVersion, options: .numeric) == .orderedDescending else {
                 phase = .finished
                 progress = 1
-                statusText = "You already have the latest version."
+                statusText = "You're already running the latest version."
                 return
             }
 
-            try await downloadAndInstall(from: feed.assetURL)
+            let assetURL = currentDownloadURL(from: feed)
+            try await downloadAndInstall(from: assetURL)
         } catch {
             phase = .failed
             progress = 0
@@ -72,6 +80,14 @@ final class UpdaterService: ObservableObject {
         progress = 1
         phase = .finished
         statusText = "Installer opened. Follow the macOS prompts to replace the app."
+    }
+
+    private func currentDownloadURL(from feed: UpdateFeed) -> String {
+        #if arch(arm64)
+        return feed.arm64AssetURL
+        #else
+        return feed.x86_64AssetURL
+        #endif
     }
 }
 

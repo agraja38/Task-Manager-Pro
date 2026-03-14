@@ -17,18 +17,7 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Picker("Mode", selection: $appState.displayMode) {
-                    ForEach(DisplayMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 220)
-
                 Button("Refresh") { appState.refreshAll() }
-                Button("Export CSV") { appState.exportSnapshot(asJSON: false) }
-                Button("Export JSON") { appState.exportSnapshot(asJSON: true) }
-                Button("Check Updates") { appState.startUpdateFlow() }
             }
         }
         .sheet(isPresented: $appState.updateSheetPresented) {
@@ -220,20 +209,18 @@ struct ProcessRow: View {
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
 
-            if appState.displayMode == .advanced {
-                Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 3) {
-                    GridRow {
-                        Text("Memory")
-                        Text(String(format: "%.0f MB", process.memoryMB))
-                    }
-                    GridRow {
-                        Text("Energy")
-                        Text(String(format: "%.0f", process.energyImpact))
-                    }
+            Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 3) {
+                GridRow {
+                    Text("Memory")
+                    Text(String(format: "%.0f MB", process.memoryMB))
                 }
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
+                GridRow {
+                    Text("Energy")
+                    Text(String(format: "%.0f", process.energyImpact))
+                }
             }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
 
             Text(process.status)
                 .font(.subheadline.weight(.medium))
@@ -421,11 +408,6 @@ struct SettingsView: View {
 
                 GroupBox("Experience") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Picker("Default mode", selection: $appState.displayMode) {
-                            ForEach(DisplayMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
                         Toggle("Enable process tree by default", isOn: $appState.treeViewEnabled)
                     }
                     .padding(.vertical, 8)
@@ -483,9 +465,13 @@ struct UpdateSheetView: View {
                 .foregroundStyle(.secondary)
             ProgressView(value: appState.updater.progress)
                 .progressViewStyle(.linear)
-            Text("Latest version: \(appState.updater.latestVersion)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            HStack {
+                Text("Current version: \(appState.updater.currentVersion)")
+                Spacer()
+                Text("Latest version: \(appState.updater.latestVersion)")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
             if !appState.updater.releaseNotes.isEmpty {
                 GroupBox("Release Notes") {
                     Text(appState.updater.releaseNotes)

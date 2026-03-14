@@ -6,31 +6,30 @@ final class ProcessMonitorService {
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "MMM d HH:mm:ss yyyy"
+        formatter.dateFormat = "EEE MMM d HH:mm:ss yyyy"
         return formatter
     }()
 
-    func fetchProcesses() -> [ProcessSnapshot] {
-        let runningApps = Dictionary(uniqueKeysWithValues: NSWorkspace.shared.runningApplications.map { ($0.processIdentifier, $0) })
-        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,state=,%cpu=,rss=,lstart=,comm="])
+    func fetchProcesses(runningApplications: [NSRunningApplication]) -> [ProcessSnapshot] {
+        let runningApps = Dictionary(uniqueKeysWithValues: runningApplications.map { ($0.processIdentifier, $0) })
+        let output = Shell.run("/bin/ps", arguments: ["-axo", "pid=,ppid=,user=,%cpu=,rss=,state=,lstart=,command="])
         var provisional: [Int32: ProcessSnapshot] = [:]
         var childrenByParent: [Int32: [Int32]] = [:]
 
         for line in output.split(separator: "\n") {
-            let fields = line.split(whereSeparator: \.isWhitespace)
-            guard fields.count >= 10 else { continue }
+            let fields = line.split(maxSplits: 11, omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
+            guard fields.count >= 12 else { continue }
             guard
                 let pid = Int32(fields[0]),
                 let ppid = Int32(fields[1]),
-                let cpu = Double(fields[4])
+                let cpu = Double(fields[3])
             else { continue }
 
             let user = String(fields[2])
-            let stateCode = String(fields[3])
-            let memoryKB = Double(fields[5]) ?? 0
+            let memoryKB = Double(fields[4]) ?? 0
+            let stateCode = String(fields[5])
             let dateString = [fields[6], fields[7], fields[8], fields[9], fields[10]].map(String.init).joined(separator: " ")
-            let command = fields.dropFirst(11).map(String.init).joined(separator: " ")
-            let executablePath = command.isEmpty ? String(fields.last!) : command
+            let executablePath = String(fields[11])
             let app = runningApps[pid]
             let bundleID = app?.bundleIdentifier ?? ""
             let appName = app?.localizedName ?? URL(fileURLWithPath: executablePath).lastPathComponent

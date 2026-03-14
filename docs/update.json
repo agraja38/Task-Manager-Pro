@@ -1,6 +1,7 @@
 {
-  "version": "1.0.0",
-  "build": 1,
-  "notes": "Initial release of Task Manager Pro.",
-  "assetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.0/TaskManagerPro-1.0.0.zip"
+  "version": "1.0.01",
+  "build": 101,
+  "notes": "Fix live process loading, streamline the interface, improve updater behavior, and ship separate Apple Silicon and Intel downloads with the new icon.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.01/TaskManagerPro-1.0.01-apple-silicon.zip",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.01/TaskManagerPro-1.0.01-intel.zip"
 }
