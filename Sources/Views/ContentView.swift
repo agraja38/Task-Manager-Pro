@@ -88,9 +88,11 @@ struct ProcessesView: View {
                         .font(.system(size: 28, weight: .bold))
                 }
                 Spacer()
-                MetricBadge(title: "CPU", value: String(format: "%.0f%%", appState.currentMetrics.cpuPercent), color: .orange)
-                MetricBadge(title: "Memory", value: String(format: "%.0f%%", appState.currentMetrics.memoryPercent), color: .blue)
-                MetricBadge(title: "Thermal", value: appState.currentMetrics.thermalLevel, color: .pink)
+                HStack(spacing: 12) {
+                    MetricBadge(title: "CPU", value: String(format: "%.0f%%", appState.currentMetrics.cpuPercent), color: .orange, prominence: .large)
+                    MetricBadge(title: "Memory", value: String(format: "%.0f%%", appState.currentMetrics.memoryPercent), color: .blue, prominence: .large)
+                    MetricBadge(title: "Network", value: networkSummary, color: .cyan, prominence: .large)
+                }
             }
 
             HStack {
@@ -125,6 +127,14 @@ struct ProcessesView: View {
                 .foregroundStyle(.secondary)
         }
         .font(.subheadline)
+    }
+
+    private var networkSummary: String {
+        let totalKB = appState.currentMetrics.networkInKBps + appState.currentMetrics.networkOutKBps
+        if totalKB >= 1024 {
+            return String(format: "%.1f MB/s", totalKB / 1024)
+        }
+        return String(format: "%.0f KB/s", totalKB)
     }
 }
 
@@ -269,7 +279,7 @@ struct PerformanceView: View {
             let availableHeight = max(proxy.size.height - 110, 560)
             let advancedCardHeight = max(170, (availableHeight - 36) / 3)
             let normalCPUHeight = max(230, min(availableHeight * 0.48, 290))
-            let normalSecondaryHeight = max(125, min(150, (availableHeight - normalCPUHeight - 36) / 2))
+            let normalSecondaryHeight = max(118, min(138, (availableHeight - normalCPUHeight - 36) / 2))
             VStack(alignment: .leading, spacing: 18) {
                 Text("Performance")
                     .font(.system(size: 28, weight: .bold))
@@ -667,21 +677,28 @@ struct BatteryCard: View {
 }
 
 struct MetricBadge: View {
+    enum Prominence {
+        case standard
+        case large
+    }
+
     let title: String
     let value: String
     let color: Color
+    var prominence: Prominence = .standard
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font((prominence == .large ? Font.caption : Font.caption).weight(.semibold))
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font((prominence == .large ? Font.title3 : Font.headline).monospacedDigit().weight(.bold))
                 .foregroundStyle(color)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .frame(minWidth: prominence == .large ? 108 : nil, alignment: .leading)
+        .padding(.horizontal, prominence == .large ? 14 : 12)
+        .padding(.vertical, prominence == .large ? 10 : 8)
         .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

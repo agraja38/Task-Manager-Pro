@@ -16,9 +16,9 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.27"
+    @Published var latestVersion = "1.0.28"
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.27"
+    @Published var currentVersion = "1.0.28"
     @Published var pendingAssetURL: String?
     @Published var pendingDownloadSizeBytes: Int64?
 
