@@ -1,7 +1,7 @@
 {
-  "version": "1.0.02",
-  "build": 102,
-  "notes": "Ship proper installer disk images with native PKG setup flow for both Apple Silicon and Intel Macs.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.02/TaskManagerPro-1.0.02-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.02/TaskManagerPro-1.0.02-intel.dmg"
+  "version": "1.0.03",
+  "build": 103,
+  "notes": "Switch installer media to classic drag-and-drop DMGs for both Apple Silicon and Intel Macs.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.03/TaskManagerPro-1.0.03-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.03/TaskManagerPro-1.0.03-intel.dmg"
 }
