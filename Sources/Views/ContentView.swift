@@ -160,7 +160,21 @@ struct ProcessRow: View {
                 .font(.headline)
                 .lineLimit(1)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 16)
+
+            MetricChip(title: "CPU", value: cpuValueText, tint: .orange)
+            MetricChip(title: "Memory", value: String(format: "%.0f MB", process.memoryMB), tint: .blue)
+
+            Menu {
+                Button("Quit") { appState.execute(.quit, for: process) }
+                Button("Terminate") { appState.execute(.terminate, for: process) }
+                Button("Force Quit") { appState.execute(.forceQuit, for: process) }
+            } label: {
+                Label("Actions", systemImage: "ellipsis.circle")
+                    .labelStyle(.titleAndIcon)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
@@ -183,6 +197,34 @@ struct ProcessRow: View {
             return Color.orange.opacity(0.10)
         }
         return Color.white.opacity(0.04)
+    }
+
+    private var cpuValueText: String {
+        if process.cpuUsage < 1 {
+            return String(format: "%.2f%%", process.cpuUsage)
+        }
+        return String(format: "%.1f%%", process.cpuUsage)
+    }
+}
+
+struct MetricChip: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.primary)
+        }
+        .frame(width: 104, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
