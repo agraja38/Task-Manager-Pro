@@ -2,9 +2,9 @@
 
 Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a cleaner sidebar layout, real-time charts, safe process controls, and a built-in updater.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.01/TaskManagerPro-1.0.01-apple-silicon.zip)
+[Download Installer for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.02/TaskManagerPro-1.0.02-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.01/TaskManagerPro-1.0.01-intel.zip)
+[Download Installer for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.02/TaskManagerPro-1.0.02-intel.dmg)
 
 ## Highlights
 
@@ -16,7 +16,7 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 - Search, sort, filter, process tree view, dark mode, beginner/advanced modes, and resource-heavy highlighting
 - Menu bar live monitor showing CPU and memory activity
 - Built-in update flow with download/install progress UI
-- Separate Apple Silicon and Intel builds
+- Separate Apple Silicon and Intel installer builds
 
 ## macOS Notes
 
@@ -27,17 +27,17 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 
 ## Updating
 
-Task Manager Pro checks a GitHub-hosted `docs/update.json` feed. The in-app updater downloads the latest archive, shows progress during download and install handoff, then opens the installer for replacement.
+Task Manager Pro checks a GitHub-hosted `docs/update.json` feed. The in-app updater downloads the latest installer disk image, shows progress during download and install handoff, then opens it so macOS can continue the installation flow.
 
 When publishing a new version:
 
-1. Build a new release archive.
-2. Upload the archive to a GitHub release.
+1. Build new installer images.
+2. Upload the DMG files to a GitHub release.
 3. Update `docs/update.json` with the new version and asset URL.
 
 ## Project Structure
 
 - `Sources/` contains the app, views, models, and service modules
 - `AppBundle/Contents/Info.plist` defines the app bundle metadata
-- `build.sh` creates a universal binary, app bundle, zip, dmg, and update feed
+- `build.sh` creates architecture-specific app bundles, PKG installers, DMGs, and the update feed
 - `docs/update.json` is the updater manifest

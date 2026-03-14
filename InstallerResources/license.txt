@@ -1,0 +1,5 @@
+Task Manager Pro
+Copyright 2026 Agraja
+
+Permission is granted to install and use this application on macOS systems.
+This software is provided as-is, without warranty of any kind.
