@@ -38,6 +38,12 @@ final class AppState: ObservableObject {
 
     @Published var cpuAlertThreshold = 85.0
     @Published var memoryAlertThreshold = 85.0
+    @Published var menuBarDisplayMode: MenuBarDisplayMode = UserDefaults.standard.string(forKey: "menuBarDisplayMode").flatMap(MenuBarDisplayMode.init(rawValue:)) ?? .compact {
+        didSet {
+            UserDefaults.standard.set(menuBarDisplayMode.rawValue, forKey: "menuBarDisplayMode")
+            NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil, userInfo: ["mode": menuBarDisplayMode.rawValue])
+        }
+    }
 
     let updater = UpdaterService()
 
@@ -115,8 +121,10 @@ final class AppState: ObservableObject {
                     self.selectedPID = self.filteredProcesses.first?.pid
                 }
 
-                let summary = String(format: "CPU %2.0f%%  MEM %2.0f%%", metrics.cpuPercent, metrics.memoryPercent)
-                NotificationCenter.default.post(name: .pulseTaskMetricsDidUpdate, object: nil, userInfo: ["summary": summary])
+                NotificationCenter.default.post(name: .pulseTaskMetricsDidUpdate, object: nil, userInfo: [
+                    "cpuPercent": metrics.cpuPercent,
+                    "memoryPercent": metrics.memoryPercent
+                ])
             }
         }
     }

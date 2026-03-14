@@ -162,7 +162,7 @@ struct ProcessRow: View {
 
             Spacer(minLength: 12)
 
-            ResourcePill(title: "CPU", value: String(format: "%.1f%%", process.cpuUsage), tint: .orange)
+            ResourcePill(title: "CPU", value: cpuValueText, tint: .orange)
             ResourcePill(title: "Memory", value: String(format: "%.0f MB", process.memoryMB), tint: .blue)
 
             Menu {
@@ -196,6 +196,13 @@ struct ProcessRow: View {
             return Color.orange.opacity(0.10)
         }
         return Color.white.opacity(0.04)
+    }
+
+    private var cpuValueText: String {
+        if process.cpuUsage < 1 {
+            return String(format: "%.2f%%", process.cpuUsage)
+        }
+        return String(format: "%.1f%%", process.cpuUsage)
     }
 }
 
@@ -282,6 +289,13 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Task Manager Pro keeps the interface focused on a fast app list and a live performance dashboard.")
                             .foregroundStyle(.secondary)
+
+                        Picker("Menu Bar Monitor", selection: $appState.menuBarDisplayMode) {
+                            ForEach(MenuBarDisplayMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 8)
                 }

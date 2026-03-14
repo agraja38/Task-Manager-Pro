@@ -15,6 +15,14 @@ enum TopSection: String, CaseIterable, Identifiable {
     }
 }
 
+enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
+    case compact = "Compact"
+    case twoLine = "Two-Line"
+    case off = "Off"
+
+    var id: String { rawValue }
+}
+
 enum ProcessFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case appsOnly = "Apps Only"
@@ -116,4 +124,5 @@ struct UpdateFeed: Decodable {
 
 extension Notification.Name {
     static let pulseTaskMetricsDidUpdate = Notification.Name("pulseTaskMetricsDidUpdate")
+    static let pulseTaskMenuBarPreferencesDidChange = Notification.Name("pulseTaskMenuBarPreferencesDidChange")
 }
