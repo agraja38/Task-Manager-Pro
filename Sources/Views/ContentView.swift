@@ -91,6 +91,7 @@ struct ProcessesView: View {
                 HStack(spacing: 12) {
                     MetricBadge(title: "CPU", value: String(format: "%.0f%%", appState.currentMetrics.cpuPercent), color: .orange, prominence: .large)
                     MetricBadge(title: "Memory", value: String(format: "%.0f%%", appState.currentMetrics.memoryPercent), color: .blue, prominence: .large)
+                    MetricBadge(title: "GPU", value: gpuSummary, color: .purple, prominence: .large)
                     MetricBadge(title: "Network", value: networkSummary, color: .cyan, prominence: .large)
                 }
             }
@@ -135,6 +136,13 @@ struct ProcessesView: View {
             return String(format: "%.1f MB/s", totalKB / 1024)
         }
         return String(format: "%.0f KB/s", totalKB)
+    }
+
+    private var gpuSummary: String {
+        guard let gpuPercent = appState.currentMetrics.gpuPercent else {
+            return "--"
+        }
+        return String(format: "%.0f%%", gpuPercent)
     }
 }
 
@@ -566,6 +574,8 @@ struct SettingsView: View {
 
                 GroupBox("Alerts") {
                     VStack(alignment: .leading, spacing: 12) {
+                        Toggle("Enable threshold notifications", isOn: $appState.notificationsEnabled)
+
                         HStack {
                             Text("CPU threshold")
                             Slider(value: $appState.cpuAlertThreshold, in: 50 ... 100, step: 1)

@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.29"
-BUILD_NUMBER="129"
+VERSION="1.0.30"
+BUILD_NUMBER="130"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -37,6 +37,7 @@ COMMON_FLAGS=(
   -framework Charts
   -framework IOKit
   -framework ServiceManagement
+  -framework UserNotifications
 )
 
 SOURCE_FILES=("${(@f)$(find "$ROOT_DIR/Sources" -name '*.swift' -print | sort)}")
@@ -91,11 +92,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.29",
-  "build": 129,
-  "notes": "Add advanced-mode GPU graph data from the macOS graphics registry and shorten the normal-mode Network widget again so it fits the screen cleanly.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.29/TaskManagerPro-1.0.29-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.29/TaskManagerPro-1.0.29-intel.dmg"
+  "version": "1.0.30",
+  "build": 130,
+  "notes": "Show live GPU usage in the Processes header and add optional threshold notifications with a Settings toggle.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.30/TaskManagerPro-1.0.30-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.30/TaskManagerPro-1.0.30-intel.dmg"
 }
 JSON
 
