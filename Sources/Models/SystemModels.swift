@@ -38,33 +38,6 @@ enum CPUGraphMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-enum PerformanceWidgetKind: String, CaseIterable, Identifiable {
-    case cpu = "CPU"
-    case memory = "Memory"
-    case disk = "Disk"
-    case network = "Network"
-    case gpu = "GPU"
-    case battery = "Battery & System"
-
-    var id: String { rawValue }
-}
-
-enum PerformanceWidgetSize: String, CaseIterable, Identifiable {
-    case compact = "Compact"
-    case regular = "Regular"
-    case expanded = "Expanded"
-
-    var id: String { rawValue }
-
-    var heightMultiplier: Double {
-        switch self {
-        case .compact: 0.75
-        case .regular: 1.0
-        case .expanded: 1.25
-        }
-    }
-}
-
 enum ProcessFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case appsOnly = "Apps Only"

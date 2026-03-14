@@ -269,29 +269,16 @@ struct PerformanceView: View {
             let availableHeight = max(proxy.size.height - 110, 560)
             let cardHeight = max(170, (availableHeight - 36) / 3)
             VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Text("Performance")
-                        .font(.system(size: 28, weight: .bold))
-                    Spacer()
-                    Menu {
-                        if appState.hiddenPerformanceWidgets.isEmpty {
-                            Text("All widgets are already shown")
-                        } else {
-                            ForEach(appState.hiddenPerformanceWidgets) { widget in
-                                Button("Add \(widget.rawValue)") {
-                                    appState.addWidget(widget)
-                                }
-                            }
-                        }
-                    } label: {
-                        Label("Add Widget", systemImage: "plus")
-                    }
-                }
+                Text("Performance")
+                    .font(.system(size: 28, weight: .bold))
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                    ForEach(appState.visiblePerformanceWidgets) { widget in
-                        performanceWidget(widget, baseHeight: cardHeight)
-                    }
+                    CPUChartCard(height: cardHeight)
+                    MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: cardHeight)
+                    MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: cardHeight)
+                    MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: cardHeight)
+                    MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: cardHeight)
+                    BatteryCard(height: cardHeight)
                 }
 
                 if !appState.alerts.isEmpty {
@@ -319,63 +306,6 @@ struct PerformanceView: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
-
-    @ViewBuilder
-    private func performanceWidget(_ widget: PerformanceWidgetKind, baseHeight: CGFloat) -> some View {
-        let height = CGFloat(Double(baseHeight) * appState.widgetSize(for: widget).heightMultiplier)
-        switch widget {
-        case .cpu:
-            CPUChartCard(height: height)
-        case .memory:
-            PerformanceWidgetContainer(kind: widget) {
-                MetricChartCard(
-                    title: "Memory",
-                    subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB),
-                    history: appState.memoryHistory,
-                    color: .blue,
-                    yLabel: "%",
-                    height: height
-                )
-            }
-        case .disk:
-            PerformanceWidgetContainer(kind: widget) {
-                MetricChartCard(
-                    title: "Disk",
-                    subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps),
-                    history: appState.diskHistory,
-                    color: .green,
-                    yLabel: "MB/s",
-                    height: height
-                )
-            }
-        case .network:
-            PerformanceWidgetContainer(kind: widget) {
-                MetricChartCard(
-                    title: "Network",
-                    subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps),
-                    history: appState.networkHistory,
-                    color: .cyan,
-                    yLabel: "KB/s",
-                    height: height
-                )
-            }
-        case .gpu:
-            PerformanceWidgetContainer(kind: widget) {
-                MetricChartCard(
-                    title: "GPU",
-                    subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0),
-                    history: appState.gpuHistory,
-                    color: .purple,
-                    yLabel: "%",
-                    height: height
-                )
-            }
-        case .battery:
-            PerformanceWidgetContainer(kind: widget) {
-                BatteryCard(height: height)
-            }
         }
     }
 }
@@ -447,10 +377,13 @@ struct CPUChartCard: View {
                     .foregroundStyle(.secondary)
 
                 if isPerCoreMode {
-                    LazyVGrid(columns: perCoreColumns, spacing: 8) {
-                        ForEach(coreSeries) { series in
-                            CoreMiniChartCard(series: series)
+                    ScrollView(.vertical, showsIndicators: true) {
+                        LazyVGrid(columns: perCoreColumns, spacing: 8) {
+                            ForEach(coreSeries) { series in
+                                CoreMiniChartCard(series: series)
+                            }
                         }
+                        .padding(.trailing, 4)
                     }
                     .frame(height: max(110, height - 76), alignment: .top)
                 } else {
@@ -475,10 +408,6 @@ struct CPUChartCard: View {
             .padding(.vertical, 8)
         }
         .contextMenu {
-            widgetContextMenu
-
-            Divider()
-
             Button {
                 appState.cpuGraphMode = .overall
             } label: {
@@ -492,55 +421,6 @@ struct CPUChartCard: View {
             }
             .disabled(appState.perCoreCPUHistory.isEmpty)
         }
-    }
-
-    @ViewBuilder
-    private var widgetContextMenu: some View {
-        Menu("Size") {
-            ForEach(PerformanceWidgetSize.allCases) { size in
-                Button {
-                    appState.setWidgetSize(size, for: .cpu)
-                } label: {
-                    Label(size.rawValue, systemImage: appState.widgetSize(for: .cpu) == size ? "checkmark" : "rectangle.expand.vertical")
-                }
-            }
-        }
-
-        Button("Remove Widget") {
-            appState.removeWidget(.cpu)
-        }
-        .disabled(appState.visiblePerformanceWidgets.count <= 1)
-    }
-}
-
-struct PerformanceWidgetContainer<Content: View>: View {
-    @EnvironmentObject private var appState: AppState
-    let kind: PerformanceWidgetKind
-    let content: Content
-
-    init(kind: PerformanceWidgetKind, @ViewBuilder content: () -> Content) {
-        self.kind = kind
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .contextMenu {
-                Menu("Size") {
-                    ForEach(PerformanceWidgetSize.allCases) { size in
-                        Button {
-                            appState.setWidgetSize(size, for: kind)
-                        } label: {
-                            Label(size.rawValue, systemImage: appState.widgetSize(for: kind) == size ? "checkmark" : "rectangle.expand.vertical")
-                        }
-                    }
-                }
-
-                Button("Remove Widget") {
-                    appState.removeWidget(kind)
-                }
-                .disabled(appState.visiblePerformanceWidgets.count <= 1)
-            }
     }
 }
 
@@ -577,10 +457,10 @@ struct CoreMiniChartCard: View {
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
             .chartYScale(domain: 0 ... 100)
-            .frame(height: 46)
+            .frame(height: 40)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(series.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
