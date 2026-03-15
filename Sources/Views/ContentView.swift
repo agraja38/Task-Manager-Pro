@@ -10,6 +10,8 @@ struct ContentView: View {
             topNavigation
             Divider()
             detailView
+            Spacer(minLength: 0)
+            bottomBar
         }
     }
 
@@ -52,6 +54,17 @@ struct ContentView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+
+    private var bottomBar: some View {
+        HStack {
+            Spacer()
+            Text("Created by Agraja")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 10)
     }
 }
 
@@ -173,18 +186,12 @@ struct ProcessRow: View {
         .background(backgroundFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(borderColor, lineWidth: appState.selectedPID == process.pid ? 1.2 : 1)
+                .stroke(borderColor, lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .onTapGesture {
-            appState.selectedPID = process.pid
-        }
     }
 
     private var backgroundFill: Color {
-        if appState.selectedPID == process.pid {
-            return Color.accentColor.opacity(0.12)
-        }
         if process.isHeavy {
             return Color.orange.opacity(0.10)
         }
@@ -209,9 +216,6 @@ struct ProcessRow: View {
     }
 
     private var borderColor: Color {
-        if appState.selectedPID == process.pid {
-            return Color.accentColor.opacity(0.65)
-        }
         return Color(nsColor: .separatorColor).opacity(0.55)
     }
 }

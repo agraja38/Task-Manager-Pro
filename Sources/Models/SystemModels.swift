@@ -46,6 +46,7 @@ enum ProcessFilter: String, CaseIterable, Identifiable {
 
 enum ProcessSortKey: String, CaseIterable, Identifiable {
     case cpu = "CPU"
+    case gpu = "GPU"
     case memory = "Memory"
     case name = "Name"
     case energy = "Energy"

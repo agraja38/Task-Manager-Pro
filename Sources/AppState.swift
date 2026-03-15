@@ -14,7 +14,6 @@ final class AppState: ObservableObject {
     @Published var processFilter: ProcessFilter = .appsOnly
     @Published var sortKey: ProcessSortKey = .cpu
     @Published var searchText = ""
-    @Published var selectedPID: Int32?
     @Published var processes: [ProcessSnapshot] = []
     @Published var latestError = ""
     @Published var currentMetrics = PerformanceSnapshot(
@@ -96,6 +95,7 @@ final class AppState: ObservableObject {
 
         switch sortKey {
         case .cpu: return base.sorted { $0.cpuUsage > $1.cpuUsage }
+        case .gpu: return base.sorted { ($0.gpuUsage ?? 0) > ($1.gpuUsage ?? 0) }
         case .memory: return base.sorted { $0.memoryMB > $1.memoryMB }
         case .name: return base.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .energy: return base.sorted { $0.energyImpact > $1.energyImpact }
@@ -134,9 +134,6 @@ final class AppState: ObservableObject {
                     self.latestError = "Task Manager Pro could not load the process list. Try refreshing again."
                 } else if self.latestError.contains("could not load") {
                     self.latestError = ""
-                }
-                if self.selectedPID == nil || !processes.contains(where: { $0.pid == self.selectedPID }) {
-                    self.selectedPID = self.filteredProcesses.first?.pid
                 }
 
                 NotificationCenter.default.post(name: .pulseTaskMetricsDidUpdate, object: nil, userInfo: [

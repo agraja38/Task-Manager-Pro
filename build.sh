@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.32"
-BUILD_NUMBER="132"
+VERSION="1.0.33"
+BUILD_NUMBER="133"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.32",
-  "build": 132,
-  "notes": "Add per-app GPU estimates in Processes, improve row outlines in light mode, and remove the old alert and footer bars.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.32/TaskManagerPro-1.0.32-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.32/TaskManagerPro-1.0.32-intel.dmg"
+  "version": "1.0.33",
+  "build": 133,
+  "notes": "Restore the bottom signature, remove process row selection, and add GPU sorting in the Processes tab.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.33/TaskManagerPro-1.0.33-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.33/TaskManagerPro-1.0.33-intel.dmg"
 }
 JSON
 
