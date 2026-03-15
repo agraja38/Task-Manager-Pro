@@ -16,9 +16,9 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.30"
+    @Published var latestVersion = "1.0.31"
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.30"
+    @Published var currentVersion = "1.0.31"
     @Published var pendingAssetURL: String?
     @Published var pendingDownloadSizeBytes: Int64?
 
@@ -142,15 +142,12 @@ final class UpdaterService: ObservableObject {
     }
 
     private func prepareDownloadedDiskImage(from temporaryURL: URL, sourceURL: URL) throws -> URL {
-        let downloadsFolder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
+        let stagingDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taskmanagerpro-update-\(UUID().uuidString)", isDirectory: true)
         let fileName = sourceURL.lastPathComponent.isEmpty ? "TaskManagerPro-Update.dmg" : sourceURL.lastPathComponent
-        let destinationURL = downloadsFolder.appendingPathComponent(fileName)
+        let destinationURL = stagingDirectory.appendingPathComponent(fileName)
 
-        if FileManager.default.fileExists(atPath: destinationURL.path) {
-            try FileManager.default.removeItem(at: destinationURL)
-        }
-
+        try FileManager.default.createDirectory(at: stagingDirectory, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: temporaryURL, to: destinationURL)
         return destinationURL
     }
@@ -203,6 +200,7 @@ final class UpdaterService: ObservableObject {
             sourceAppURL.path,
             targetAppURL.path,
             mountedImage.mountPoint.path,
+            mountedImage.diskImageURL.path,
             "\(ProcessInfo.processInfo.processIdentifier)"
         ]
 
@@ -222,7 +220,8 @@ final class UpdaterService: ObservableObject {
         SOURCE_APP="$1"
         TARGET_APP="$2"
         MOUNT_POINT="$3"
-        PID_TO_WAIT="$4"
+        DISK_IMAGE_PATH="$4"
+        PID_TO_WAIT="$5"
 
         while kill -0 "$PID_TO_WAIT" 2>/dev/null; do
           sleep 0.2
@@ -233,6 +232,9 @@ final class UpdaterService: ObservableObject {
         /usr/bin/xattr -cr "$TARGET_APP" 2>/dev/null || true
         /usr/bin/open "$TARGET_APP"
         /usr/bin/hdiutil detach "$MOUNT_POINT" -quiet || true
+        /bin/rm -f "$DISK_IMAGE_PATH"
+        /bin/rmdir "$(dirname "$DISK_IMAGE_PATH")" 2>/dev/null || true
+        /bin/rm -f "$0"
         """
 
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)

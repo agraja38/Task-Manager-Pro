@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.30"
-BUILD_NUMBER="130"
+VERSION="1.0.31"
+BUILD_NUMBER="131"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -92,11 +92,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.30",
-  "build": 130,
-  "notes": "Show live GPU usage in the Processes header and add optional threshold notifications with a Settings toggle.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.30/TaskManagerPro-1.0.30-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.30/TaskManagerPro-1.0.30-intel.dmg"
+  "version": "1.0.31",
+  "build": 131,
+  "notes": "Keep in-app updates fully in the background by staging and cleaning up the installer DMG in a temporary location instead of Downloads.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.31/TaskManagerPro-1.0.31-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.31/TaskManagerPro-1.0.31-intel.dmg"
 }
 JSON
 
