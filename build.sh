@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.31"
-BUILD_NUMBER="131"
+VERSION="1.0.32"
+BUILD_NUMBER="132"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -37,7 +37,6 @@ COMMON_FLAGS=(
   -framework Charts
   -framework IOKit
   -framework ServiceManagement
-  -framework UserNotifications
 )
 
 SOURCE_FILES=("${(@f)$(find "$ROOT_DIR/Sources" -name '*.swift' -print | sort)}")
@@ -92,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.31",
-  "build": 131,
-  "notes": "Keep in-app updates fully in the background by staging and cleaning up the installer DMG in a temporary location instead of Downloads.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.31/TaskManagerPro-1.0.31-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.31/TaskManagerPro-1.0.31-intel.dmg"
+  "version": "1.0.32",
+  "build": 132,
+  "notes": "Add per-app GPU estimates in Processes, improve row outlines in light mode, and remove the old alert and footer bars.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.32/TaskManagerPro-1.0.32-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.32/TaskManagerPro-1.0.32-intel.dmg"
 }
 JSON
 

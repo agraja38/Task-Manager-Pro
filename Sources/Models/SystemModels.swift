@@ -70,6 +70,7 @@ struct ProcessSnapshot: Identifiable, Hashable {
     let stateCode: String
     let status: String
     let cpuUsage: Double
+    let gpuUsage: Double?
     let memoryMB: Double
     let energyImpact: Double
     let launchDate: Date?
@@ -94,14 +95,6 @@ struct RunningAppMetadata: Hashable {
     let isFinishedLaunching: Bool
     let isRegularApp: Bool
     let architecture: String
-}
-
-struct AlertItem: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    let message: String
-    let level: String
-    let timestamp: Date
 }
 
 struct TimePoint: Identifiable, Hashable {

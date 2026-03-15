@@ -10,8 +10,6 @@ struct ContentView: View {
             topNavigation
             Divider()
             detailView
-            Divider()
-            bottomBar
         }
     }
 
@@ -55,17 +53,6 @@ struct ContentView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
     }
-
-    private var bottomBar: some View {
-        HStack {
-            Spacer()
-            Text("Created by Agraja")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-    }
 }
 
 struct ProcessesView: View {
@@ -75,7 +62,6 @@ struct ProcessesView: View {
         VStack(spacing: 16) {
             header
             ProcessTable(processes: appState.filteredProcesses)
-            footer
         }
         .padding(20)
     }
@@ -115,19 +101,6 @@ struct ProcessesView: View {
                 .frame(width: 140)
             }
         }
-    }
-
-    private var footer: some View {
-        HStack {
-            if !appState.latestError.isEmpty {
-                Text(appState.latestError)
-                    .foregroundStyle(appState.latestError.contains("blocked") ? .red : .secondary)
-            }
-            Spacer()
-            Text("\(appState.filteredProcesses.count) visible processes")
-                .foregroundStyle(.secondary)
-        }
-        .font(.subheadline)
     }
 
     private var networkSummary: String {
@@ -181,6 +154,7 @@ struct ProcessRow: View {
             Spacer(minLength: 16)
 
             MetricChip(title: "CPU", value: cpuValueText, tint: .orange)
+            MetricChip(title: "GPU", value: gpuValueText, tint: .purple)
             MetricChip(title: "Memory", value: String(format: "%.0f MB", process.memoryMB), tint: .blue)
 
             Menu {
@@ -199,7 +173,7 @@ struct ProcessRow: View {
         .background(backgroundFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(appState.selectedPID == process.pid ? Color.accentColor.opacity(0.65) : Color.white.opacity(0.03), lineWidth: appState.selectedPID == process.pid ? 1.2 : 1)
+                .stroke(borderColor, lineWidth: appState.selectedPID == process.pid ? 1.2 : 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onTapGesture {
@@ -214,7 +188,7 @@ struct ProcessRow: View {
         if process.isHeavy {
             return Color.orange.opacity(0.10)
         }
-        return Color.white.opacity(0.04)
+        return Color.primary.opacity(0.035)
     }
 
     private var cpuValueText: String {
@@ -222,6 +196,23 @@ struct ProcessRow: View {
             return String(format: "%.2f%%", process.cpuUsage)
         }
         return String(format: "%.1f%%", process.cpuUsage)
+    }
+
+    private var gpuValueText: String {
+        guard let gpuUsage = process.gpuUsage else {
+            return "--"
+        }
+        if gpuUsage < 1 {
+            return String(format: "%.2f%%", gpuUsage)
+        }
+        return String(format: "%.1f%%", gpuUsage)
+    }
+
+    private var borderColor: Color {
+        if appState.selectedPID == process.pid {
+            return Color.accentColor.opacity(0.65)
+        }
+        return Color(nsColor: .separatorColor).opacity(0.55)
     }
 }
 
@@ -319,28 +310,6 @@ struct PerformanceView: View {
                     }
                 }
 
-                if !appState.alerts.isEmpty {
-                    GroupBox("Alerts") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(appState.alerts) { alert in
-                                HStack(alignment: .top) {
-                                    Text(alert.level.uppercased())
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(alert.level == "Critical" ? .red : .orange)
-                                        .frame(width: 70, alignment: .leading)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(alert.title).font(.headline)
-                                        Text(alert.message).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Text(alert.timestamp, style: .time)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
             }
             .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -529,9 +498,6 @@ struct SettingsView: View {
 
                 GroupBox("Experience") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Task Manager Pro keeps the interface focused on a fast app list and a live performance dashboard.")
-                            .foregroundStyle(.secondary)
-
                         Toggle("Show app icon in Dock", isOn: $appState.showsDockIcon)
 
                         Picker("Menu Bar Monitor", selection: $appState.menuBarDisplayMode) {
@@ -568,26 +534,6 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                         Text("4. Keep the public-API fallback in place so normal users can run the app safely without the helper.")
                             .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 8)
-                }
-
-                GroupBox("Alerts") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Enable threshold notifications", isOn: $appState.notificationsEnabled)
-
-                        HStack {
-                            Text("CPU threshold")
-                            Slider(value: $appState.cpuAlertThreshold, in: 50 ... 100, step: 1)
-                            Text("\(Int(appState.cpuAlertThreshold))%")
-                                .frame(width: 44)
-                        }
-                        HStack {
-                            Text("Memory threshold")
-                            Slider(value: $appState.memoryAlertThreshold, in: 50 ... 100, step: 1)
-                            Text("\(Int(appState.memoryAlertThreshold))%")
-                                .frame(width: 44)
-                        }
                     }
                     .padding(.vertical, 8)
                 }

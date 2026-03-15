@@ -1,6 +1,5 @@
 import AppKit
 import Foundation
-import UserNotifications
 
 @MainActor
 final class AppState: ObservableObject {
@@ -17,7 +16,6 @@ final class AppState: ObservableObject {
     @Published var searchText = ""
     @Published var selectedPID: Int32?
     @Published var processes: [ProcessSnapshot] = []
-    @Published var alerts: [AlertItem] = []
     @Published var latestError = ""
     @Published var currentMetrics = PerformanceSnapshot(
         cpuPercent: 0,
@@ -44,8 +42,6 @@ final class AppState: ObservableObject {
     @Published var processHistory: [Int32: [TimePoint]] = [:]
     @Published var memoryProcessHistory: [Int32: [TimePoint]] = [:]
 
-    @Published var cpuAlertThreshold = 85.0
-    @Published var memoryAlertThreshold = 85.0
     @Published var menuBarDisplayMode: MenuBarDisplayMode = UserDefaults.standard.string(forKey: "menuBarDisplayMode").flatMap(MenuBarDisplayMode.init(rawValue:)) ?? .compact {
         didSet {
             UserDefaults.standard.set(menuBarDisplayMode.rawValue, forKey: "menuBarDisplayMode")
@@ -69,22 +65,12 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(showsAdvancedTelemetryWidgets, forKey: "showsAdvancedTelemetryWidgets")
         }
     }
-    @Published var notificationsEnabled: Bool = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? false {
-        didSet {
-            UserDefaults.standard.set(notificationsEnabled, forKey: "notificationsEnabled")
-            if notificationsEnabled {
-                requestNotificationPermission()
-            }
-        }
-    }
 
     let updater = UpdaterService()
 
     private let processService = ProcessMonitorService()
     private let metricsService = SystemMetricsService()
     private var timer: Timer?
-    private var hasSentCPUThresholdNotification = false
-    private var hasSentMemoryThresholdNotification = false
 
     private init() {
         applyAppearanceMode()
@@ -134,17 +120,16 @@ final class AppState: ObservableObject {
         })
         let processService = self.processService
         let metricsService = self.metricsService
-        let includeAdvancedTelemetry = self.showsAdvancedTelemetryWidgets
 
         Task.detached(priority: .userInitiated) {
-            let processes = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
-            let metrics = metricsService.sample(includeAdvancedTelemetry: includeAdvancedTelemetry)
+            let rawProcesses = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
+            let metrics = metricsService.sample(includeAdvancedTelemetry: true)
 
             await MainActor.run {
+                let processes = self.applyGPUUsageEstimates(to: rawProcesses, overallGPUPercent: metrics.gpuPercent)
                 self.processes = processes
                 self.currentMetrics = metrics
                 self.appendHistory(snapshot: metrics, processes: processes)
-                self.raiseAlertsIfNeeded(processes: processes, metrics: metrics)
                 if processes.isEmpty {
                     self.latestError = "Task Manager Pro could not load the process list. Try refreshing again."
                 } else if self.latestError.contains("could not load") {
@@ -230,6 +215,79 @@ final class AppState: ObservableObject {
         }
     }
 
+    private func applyGPUUsageEstimates(to processes: [ProcessSnapshot], overallGPUPercent: Double?) -> [ProcessSnapshot] {
+        guard let overallGPUPercent, overallGPUPercent > 0 else {
+            return processes.map { process in
+                ProcessSnapshot(
+                    id: process.id,
+                    pid: process.pid,
+                    ppid: process.ppid,
+                    name: process.name,
+                    executablePath: process.executablePath,
+                    bundleIdentifier: process.bundleIdentifier,
+                    user: process.user,
+                    stateCode: process.stateCode,
+                    status: process.status,
+                    cpuUsage: process.cpuUsage,
+                    gpuUsage: nil,
+                    memoryMB: process.memoryMB,
+                    energyImpact: process.energyImpact,
+                    launchDate: process.launchDate,
+                    elapsedTime: process.elapsedTime,
+                    isApp: process.isApp,
+                    isFrontmost: process.isFrontmost,
+                    isCritical: process.isCritical,
+                    childPIDs: process.childPIDs,
+                    metadata: process.metadata
+                )
+            }
+        }
+
+        let candidates = processes.filter { $0.isApp }
+        let totalWeight = candidates.reduce(0.0) { partial, process in
+            partial + gpuWeight(for: process)
+        }
+
+        guard totalWeight > 0 else {
+            return processes
+        }
+
+        let estimatedGPUByPID = Dictionary(uniqueKeysWithValues: candidates.map { process in
+            (process.pid, overallGPUPercent * gpuWeight(for: process) / totalWeight)
+        })
+
+        return processes.map { process in
+            ProcessSnapshot(
+                id: process.id,
+                pid: process.pid,
+                ppid: process.ppid,
+                name: process.name,
+                executablePath: process.executablePath,
+                bundleIdentifier: process.bundleIdentifier,
+                user: process.user,
+                stateCode: process.stateCode,
+                status: process.status,
+                cpuUsage: process.cpuUsage,
+                gpuUsage: estimatedGPUByPID[process.pid],
+                memoryMB: process.memoryMB,
+                energyImpact: process.energyImpact,
+                launchDate: process.launchDate,
+                elapsedTime: process.elapsedTime,
+                isApp: process.isApp,
+                isFrontmost: process.isFrontmost,
+                isCritical: process.isCritical,
+                childPIDs: process.childPIDs,
+                metadata: process.metadata
+            )
+        }
+    }
+
+    private func gpuWeight(for process: ProcessSnapshot) -> Double {
+        let cpuWeight = max(process.cpuUsage, process.isFrontmost ? 4 : 0.15)
+        let memoryWeight = min(process.memoryMB / 1024, 2.5) * 0.35
+        return cpuWeight + memoryWeight
+    }
+
     private func syncPerCoreHistory(with samples: [Double], timestamp: Date) {
         guard !samples.isEmpty else {
             perCoreCPUHistory = []
@@ -247,83 +305,6 @@ final class AppState: ObservableObject {
 
     private func trimmed(_ values: [TimePoint], limit: Int = 60) -> [TimePoint] {
         Array(values.suffix(limit))
-    }
-
-    private func raiseAlertsIfNeeded(processes: [ProcessSnapshot], metrics: PerformanceSnapshot) {
-        var newAlerts: [AlertItem] = []
-
-        let cpuAboveThreshold = metrics.cpuPercent >= cpuAlertThreshold
-        if cpuAboveThreshold {
-            newAlerts.append(AlertItem(title: "High CPU load", message: String(format: "CPU usage reached %.0f%%.", metrics.cpuPercent), level: "Warning", timestamp: Date()))
-        }
-
-        let memoryAboveThreshold = metrics.memoryPercent >= memoryAlertThreshold
-        if memoryAboveThreshold {
-            newAlerts.append(AlertItem(title: "High memory pressure", message: String(format: "Memory usage reached %.0f%%.", metrics.memoryPercent), level: "Warning", timestamp: Date()))
-        }
-
-        if metrics.thermalLevel == "Serious" || metrics.thermalLevel == "Critical" {
-            newAlerts.append(AlertItem(title: "Thermal warning", message: "macOS reports the system thermal state as \(metrics.thermalLevel).", level: "Critical", timestamp: Date()))
-        }
-
-        if let hung = processes.first(where: { $0.status == "Uninterruptible" || $0.status == "Zombie" }) {
-            newAlerts.append(AlertItem(title: "App may be unresponsive", message: "\(hung.name) is in state \(hung.status).", level: "Warning", timestamp: Date()))
-        }
-
-        if !newAlerts.isEmpty {
-            alerts = Array((newAlerts + alerts).prefix(12))
-        }
-
-        if cpuAboveThreshold && !hasSentCPUThresholdNotification {
-            sendThresholdNotification(
-                title: "CPU threshold reached",
-                message: String(format: "CPU usage is now %.0f%%, meeting or exceeding your %.0f%% limit.", metrics.cpuPercent, cpuAlertThreshold)
-            )
-        }
-
-        if memoryAboveThreshold && !hasSentMemoryThresholdNotification {
-            sendThresholdNotification(
-                title: "Memory threshold reached",
-                message: String(format: "Memory usage is now %.0f%%, meeting or exceeding your %.0f%% limit.", metrics.memoryPercent, memoryAlertThreshold)
-            )
-        }
-
-        hasSentCPUThresholdNotification = cpuAboveThreshold
-        hasSentMemoryThresholdNotification = memoryAboveThreshold
-    }
-
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-            Task { @MainActor in
-                if let error {
-                    self.latestError = "Notification permission request failed: \(error.localizedDescription)"
-                    self.notificationsEnabled = false
-                    return
-                }
-
-                if !granted {
-                    self.latestError = "Task Manager Pro could not enable notifications because macOS permission was denied."
-                    self.notificationsEnabled = false
-                }
-            }
-        }
-    }
-
-    private func sendThresholdNotification(title: String, message: String) {
-        guard notificationsEnabled else { return }
-
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = message
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: "taskmanagerpro-\(UUID().uuidString)",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        )
-
-        UNUserNotificationCenter.current().add(request)
     }
 
 }
