@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.38"
-BUILD_NUMBER="138"
+VERSION="1.0.39"
+BUILD_NUMBER="139"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.38",
-  "build": 138,
-  "notes": "Add an advanced-only Network tab with throughput, interface, routing, DNS, and active connection monitoring, and keep monitoring alive across sleep and wake.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.38/TaskManagerPro-1.0.38-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.38/TaskManagerPro-1.0.38-intel.dmg"
+  "version": "1.0.39",
+  "build": 139,
+  "notes": "Rewrite the Advanced mode settings copy to focus on the extra features it unlocks for power users.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.39/TaskManagerPro-1.0.39-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.39/TaskManagerPro-1.0.39-intel.dmg"
 }
 JSON
 

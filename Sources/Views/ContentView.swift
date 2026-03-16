@@ -740,23 +740,23 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
                 }
 
-                GroupBox("Advanced Telemetry Helper") {
+                GroupBox("Advanced Mode") {
                     VStack(alignment: .leading, spacing: 12) {
                         Toggle("Show advanced telemetry widgets", isOn: $appState.showsAdvancedTelemetryWidgets)
 
-                        Text("Normal mode keeps the dashboard focused on CPU, memory, disk, and network. Advanced mode also shows the GPU and Battery & System widgets, plus the dedicated Network tab with interface, routing, DNS, and active connection details.")
+                        Text("Advanced mode unlocks deeper monitoring views for power users while keeping the standard dashboard clean for everyday use.")
                             .foregroundStyle(.secondary)
 
-                        Text("To achieve deeper GPU and thermal telemetry:")
+                        Text("Advanced mode includes:")
                             .font(.headline)
-                        Text("1. Sign Task Manager Pro and a helper target with the same Developer ID team.")
-                            .foregroundStyle(.secondary)
-                        Text("2. Install the helper with admin approval using a privileged XPC helper flow such as `SMAppService` or `SMJobBless`.")
-                            .foregroundStyle(.secondary)
-                        Text("3. Let that helper collect protected readings from `powermetrics`, `ioreg`, or SMC/IOKit interfaces and expose the results back to the app over XPC.")
-                            .foregroundStyle(.secondary)
-                        Text("4. Keep the public-API fallback in place so normal users can run the app safely without the helper.")
-                            .foregroundStyle(.secondary)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("• GPU usage in the Performance and Processes views")
+                            Text("• Battery & System telemetry widgets")
+                            Text("• A dedicated Network tab with interfaces, routing, DNS, and live connections")
+                            Text("• Expanded sorting and live telemetry for power-user workflows")
+                        }
+                        .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
                 }
