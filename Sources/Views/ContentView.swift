@@ -38,16 +38,18 @@ struct ContentView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .frame(minWidth: 130)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(appState.selectedSection == section ? Color.accentColor.opacity(0.16) : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(appState.selectedSection == section ? Color.accentColor.opacity(0.6) : Color.white.opacity(0.06), lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(appState.selectedSection == section ? Color.accentColor.opacity(0.16) : Color.clear)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(appState.selectedSection == section ? Color.accentColor.opacity(0.6) : Color.white.opacity(0.06), lineWidth: 1)
-                )
             }
 
             Spacer()

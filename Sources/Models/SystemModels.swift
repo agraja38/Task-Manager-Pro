@@ -49,7 +49,6 @@ enum ProcessSortKey: String, CaseIterable, Identifiable {
     case gpu = "GPU"
     case memory = "Memory"
     case name = "Name"
-    case energy = "Energy"
     var id: String { rawValue }
 }
 

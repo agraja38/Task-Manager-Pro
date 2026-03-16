@@ -98,7 +98,6 @@ final class AppState: ObservableObject {
         case .gpu: return base.sorted { ($0.gpuUsage ?? 0) > ($1.gpuUsage ?? 0) }
         case .memory: return base.sorted { $0.memoryMB > $1.memoryMB }
         case .name: return base.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        case .energy: return base.sorted { $0.energyImpact > $1.energyImpact }
         }
     }
 

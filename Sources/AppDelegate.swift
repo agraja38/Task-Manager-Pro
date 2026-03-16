@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             )
             button.image = nil
         case .twoLine:
-            statusItem.length = 74
+            statusItem.length = 62
             button.attributedTitle = NSAttributedString(string: "")
             button.image = nil
             installTwoLineStatusView(cpuText: cpuText, memoryText: memoryText, in: button)
@@ -182,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSLayoutConstraint.activate([
                 created.centerXAnchor.constraint(equalTo: button.centerXAnchor),
                 created.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-                created.widthAnchor.constraint(equalToConstant: 62)
+                created.widthAnchor.constraint(equalToConstant: 50)
             ])
             twoLineStatusView = created
             stack = created
