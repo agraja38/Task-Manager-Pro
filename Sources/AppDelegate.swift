@@ -102,12 +102,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             statusItem.length = NSStatusItem.variableLength
             removeTwoLineStatusView()
             button.attributedTitle = NSAttributedString(
-                string: "C \(cpuText) M \(memoryText)",
+                string: "CPU \(cpuText) RAM \(memoryText)",
                 attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)]
             )
             button.image = nil
         case .twoLine:
-            statusItem.length = 54
+            statusItem.length = 74
             button.attributedTitle = NSAttributedString(string: "")
             button.image = nil
             installTwoLineStatusView(cpuText: cpuText, memoryText: memoryText, in: button)
@@ -182,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSLayoutConstraint.activate([
                 created.centerXAnchor.constraint(equalTo: button.centerXAnchor),
                 created.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-                created.widthAnchor.constraint(equalToConstant: 42)
+                created.widthAnchor.constraint(equalToConstant: 62)
             ])
             twoLineStatusView = created
             stack = created
@@ -190,8 +190,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             memoryLabel = second
         }
 
-        cpuLabel.stringValue = "C \(cpuText)"
-        memoryLabel.stringValue = "M \(memoryText)"
+        cpuLabel.stringValue = "CPU \(cpuText)"
+        memoryLabel.stringValue = "RAM \(memoryText)"
         stack.isHidden = false
     }
 

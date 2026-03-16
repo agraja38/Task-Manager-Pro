@@ -3,6 +3,8 @@ import Darwin
 import Foundation
 
 final class ProcessMonitorService {
+    private let activeProcessorCount = max(1, ProcessInfo.processInfo.activeProcessorCount)
+
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -19,7 +21,7 @@ final class ProcessMonitorService {
         for (pid, metadata) in metadataByPID {
             let live = liveStatsByPID[pid]
             let ppid = metadata.ppid
-            let cpu = max(live?.cpuUsage ?? 0, metadata.cpuUsage)
+            let cpu = normalizeProcessCPUUsage(max(live?.cpuUsage ?? 0, metadata.cpuUsage))
             let user = live?.user ?? metadata.user
             let memoryMB = live?.memoryMB ?? metadata.memoryMB
             let stateCode = live?.stateCode ?? metadata.stateCode
@@ -223,6 +225,10 @@ final class ProcessMonitorService {
 
         let candidate = executablePath.split(separator: "/").last.map(String.init) ?? executablePath
         return candidate.isEmpty ? "Unknown Process" : candidate
+    }
+
+    private func normalizeProcessCPUUsage(_ rawUsage: Double) -> Double {
+        min(100, max(0, rawUsage / Double(activeProcessorCount)))
     }
 }
 
