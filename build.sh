@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.35"
-BUILD_NUMBER="135"
+VERSION="1.0.36"
+BUILD_NUMBER="136"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.35",
-  "build": 135,
-  "notes": "Remove Energy sorting, tighten the two-line menu bar footprint, and make the full top tabs clickable.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.35/TaskManagerPro-1.0.35-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.35/TaskManagerPro-1.0.35-intel.dmg"
+  "version": "1.0.36",
+  "build": 136,
+  "notes": "Tighten the two-line menu bar item again so it uses less horizontal space.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.36/TaskManagerPro-1.0.36-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.36/TaskManagerPro-1.0.36-intel.dmg"
 }
 JSON
 
