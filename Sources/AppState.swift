@@ -62,6 +62,9 @@ final class AppState: ObservableObject {
     @Published var showsAdvancedTelemetryWidgets: Bool = UserDefaults.standard.object(forKey: "showsAdvancedTelemetryWidgets") as? Bool ?? false {
         didSet {
             UserDefaults.standard.set(showsAdvancedTelemetryWidgets, forKey: "showsAdvancedTelemetryWidgets")
+            if !showsAdvancedTelemetryWidgets && sortKey == .gpu {
+                sortKey = .cpu
+            }
         }
     }
 

@@ -92,7 +92,9 @@ struct ProcessesView: View {
                 HStack(spacing: 12) {
                     MetricBadge(title: "CPU", value: String(format: "%.0f%%", appState.currentMetrics.cpuPercent), color: .orange, prominence: .large)
                     MetricBadge(title: "Memory", value: String(format: "%.0f%%", appState.currentMetrics.memoryPercent), color: .blue, prominence: .large)
-                    MetricBadge(title: "GPU", value: gpuSummary, color: .purple, prominence: .large)
+                    if appState.showsAdvancedTelemetryWidgets {
+                        MetricBadge(title: "GPU", value: gpuSummary, color: .purple, prominence: .large)
+                    }
                     MetricBadge(title: "Network", value: networkSummary, color: .cyan, prominence: .large)
                 }
             }
@@ -109,13 +111,17 @@ struct ProcessesView: View {
                 .frame(width: 150)
 
                 Picker("Sort", selection: $appState.sortKey) {
-                    ForEach(ProcessSortKey.allCases) { key in
+                    ForEach(sortOptions) { key in
                         Text(key.rawValue).tag(key)
                     }
                 }
                 .frame(width: 140)
             }
         }
+    }
+
+    private var sortOptions: [ProcessSortKey] {
+        appState.showsAdvancedTelemetryWidgets ? ProcessSortKey.allCases : ProcessSortKey.allCases.filter { $0 != .gpu }
     }
 
     private var networkSummary: String {
@@ -169,7 +175,9 @@ struct ProcessRow: View {
             Spacer(minLength: 16)
 
             MetricChip(title: "CPU", value: cpuValueText, tint: .orange)
-            MetricChip(title: "GPU", value: gpuValueText, tint: .purple)
+            if appState.showsAdvancedTelemetryWidgets {
+                MetricChip(title: "GPU", value: gpuValueText, tint: .purple)
+            }
             MetricChip(title: "Memory", value: String(format: "%.0f MB", process.memoryMB), tint: .blue)
 
             Menu {
