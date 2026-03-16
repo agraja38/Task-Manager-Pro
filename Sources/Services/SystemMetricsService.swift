@@ -41,6 +41,46 @@ final class SystemMetricsService {
         )
     }
 
+    func detailedNetworkSnapshot() -> NetworkDetailsSnapshot {
+        let route = currentRouteInfo()
+        let counters = currentInterfaceCounters()
+        let dnsInfo = currentDNSInfo()
+        let rawInterfaces = currentInterfaceDetails()
+        let interfaces = rawInterfaces.map { interface -> NetworkInterfaceSnapshot in
+            let counter = counters[interface.name]
+            return NetworkInterfaceSnapshot(
+                name: interface.name,
+                kind: interface.kind,
+                status: interface.status,
+                mtu: interface.mtu,
+                macAddress: interface.macAddress,
+                addresses: interface.addresses,
+                packetsIn: counter?.packetsIn ?? 0,
+                packetsOut: counter?.packetsOut ?? 0,
+                bytesIn: counter?.bytesIn ?? 0,
+                bytesOut: counter?.bytesOut ?? 0,
+                isPrimary: interface.name == route.interface
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.isPrimary != rhs.isPrimary {
+                return lhs.isPrimary
+            }
+            return lhs.name < rhs.name
+        }
+
+        return NetworkDetailsSnapshot(
+            interfaces: interfaces,
+            connections: currentConnections(),
+            dnsServers: dnsInfo.servers,
+            searchDomains: dnsInfo.searchDomains,
+            defaultGateway: route.gateway,
+            primaryInterface: route.interface,
+            wifiNetwork: currentWiFiNetwork(interface: route.interface),
+            capturedAt: Date()
+        )
+    }
+
     private func currentCPUPercent() -> CPUSnapshot {
         var numCPUs: natural_t = 0
         var cpuInfo: processor_info_array_t?
@@ -118,18 +158,9 @@ final class SystemMetricsService {
     }
 
     private func currentNetwork() -> (input: Double, output: Double) {
-        let output = Shell.run("/usr/sbin/netstat", arguments: ["-ibn"])
-        var inBytes: UInt64 = 0
-        var outBytes: UInt64 = 0
-
-        for line in output.split(separator: "\n").dropFirst() {
-            let fields = line.split(whereSeparator: \.isWhitespace)
-            guard fields.count >= 10 else { continue }
-            let name = String(fields[0])
-            guard name != "lo0" else { continue }
-            inBytes += UInt64(fields[6]) ?? 0
-            outBytes += UInt64(fields[9]) ?? 0
-        }
+        let counters = currentInterfaceCounters()
+        let inBytes = counters.values.reduce(UInt64(0)) { $0 + $1.bytesIn }
+        let outBytes = counters.values.reduce(UInt64(0)) { $0 + $1.bytesOut }
 
         defer { previousNetworkTotals = (inBytes, outBytes) }
         guard let previous = previousNetworkTotals else { return (0, 0) }
@@ -238,4 +269,222 @@ final class SystemMetricsService {
         sysctlbyname(name, &value, &size, nil, 0)
         return value
     }
+
+    private func currentInterfaceCounters() -> [String: NetworkInterfaceCounter] {
+        let output = Shell.run("/usr/sbin/netstat", arguments: ["-ibn"])
+        var counters: [String: NetworkInterfaceCounter] = [:]
+
+        for line in output.split(separator: "\n").dropFirst() {
+            let fields = line.split(whereSeparator: \.isWhitespace)
+            guard fields.count >= 10 else { continue }
+            let name = String(fields[0])
+            guard name != "lo0", String(fields[2]).hasPrefix("<Link#") else { continue }
+
+            counters[name] = NetworkInterfaceCounter(
+                packetsIn: UInt64(fields[4]) ?? 0,
+                packetsOut: UInt64(fields[7]) ?? 0,
+                bytesIn: UInt64(fields[6]) ?? 0,
+                bytesOut: UInt64(fields[9]) ?? 0
+            )
+        }
+
+        return counters
+    }
+
+    private func currentInterfaceDetails() -> [RawNetworkInterface] {
+        let output = Shell.run("/sbin/ifconfig", arguments: ["-a"], timeout: 10)
+        var interfaces: [RawNetworkInterface] = []
+        var currentName = ""
+        var currentMTU = 0
+        var currentStatus = "Unknown"
+        var currentMAC: String?
+        var currentAddresses: [String] = []
+
+        func flushCurrent() {
+            guard !currentName.isEmpty else { return }
+            interfaces.append(
+                RawNetworkInterface(
+                    name: currentName,
+                    kind: interfaceKind(for: currentName),
+                    status: currentStatus,
+                    mtu: currentMTU,
+                    macAddress: currentMAC,
+                    addresses: currentAddresses
+                )
+            )
+        }
+
+        for rawLine in output.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(rawLine)
+            if !line.hasPrefix("\t"), !line.hasPrefix(" ") {
+                flushCurrent()
+                currentAddresses = []
+                currentMAC = nil
+                currentStatus = "Unknown"
+                currentMTU = 0
+
+                let name = line.split(separator: ":").first.map(String.init) ?? ""
+                currentName = name
+                if let mtuRange = line.range(of: " mtu ") {
+                    currentMTU = Int(line[mtuRange.upperBound...].split(whereSeparator: \.isWhitespace).first ?? "") ?? 0
+                }
+                continue
+            }
+
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("status:") {
+                currentStatus = trimmed.replacingOccurrences(of: "status:", with: "").trimmingCharacters(in: .whitespaces).capitalized
+            } else if trimmed.hasPrefix("ether ") {
+                currentMAC = trimmed.replacingOccurrences(of: "ether ", with: "")
+            } else if trimmed.hasPrefix("inet ") {
+                let parts = trimmed.split(whereSeparator: \.isWhitespace)
+                if parts.count > 1 {
+                    currentAddresses.append(String(parts[1]))
+                }
+            } else if trimmed.hasPrefix("inet6 ") {
+                let parts = trimmed.split(whereSeparator: \.isWhitespace)
+                if parts.count > 1 {
+                    currentAddresses.append(String(parts[1]))
+                }
+            }
+        }
+
+        flushCurrent()
+        return interfaces.filter { !$0.addresses.isEmpty || $0.status == "Active" || $0.name.hasPrefix("en") || $0.name.hasPrefix("awdl") }
+    }
+
+    private func currentConnections() -> [NetworkConnectionSnapshot] {
+        let output = Shell.run("/usr/sbin/lsof", arguments: ["-nP", "-i"], timeout: 10)
+        var connections: [NetworkConnectionSnapshot] = []
+
+        for line in output.split(separator: "\n").dropFirst() {
+            let pattern = #"^(\S+)\s+(\d+)\s+(\S+)\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+(\S+)\s+(.*)$"#
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let string = String(line)
+            let range = NSRange(string.startIndex..., in: string)
+            guard
+                let match = regex.firstMatch(in: string, range: range),
+                let commandRange = Range(match.range(at: 1), in: string),
+                let pidRange = Range(match.range(at: 2), in: string),
+                let userRange = Range(match.range(at: 3), in: string),
+                let protocolRange = Range(match.range(at: 4), in: string),
+                let endpointRange = Range(match.range(at: 5), in: string)
+            else {
+                continue
+            }
+
+            let command = String(string[commandRange]).replacingOccurrences(of: "\\x20", with: " ")
+            let pid = Int32(String(string[pidRange])) ?? 0
+            let user = String(string[userRange])
+            let proto = String(string[protocolRange])
+            let endpointText = String(string[endpointRange])
+
+            let state: String
+            let endpointPortion: String
+            if let stateStart = endpointText.range(of: " (") {
+                endpointPortion = String(endpointText[..<stateStart.lowerBound])
+                state = endpointText[stateStart.upperBound...].dropLast().description
+            } else {
+                endpointPortion = endpointText
+                state = proto == "TCP" ? "Connected" : "Datagram"
+            }
+
+            let parts = endpointPortion.components(separatedBy: "->")
+            let localEndpoint = parts.first?.trimmingCharacters(in: .whitespaces) ?? endpointPortion
+            let remoteEndpoint = parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespaces) : "Listening"
+
+            connections.append(
+                NetworkConnectionSnapshot(
+                    processName: command,
+                    pid: pid,
+                    user: user,
+                    protocolName: proto,
+                    localEndpoint: localEndpoint,
+                    remoteEndpoint: remoteEndpoint,
+                    state: state
+                )
+            )
+        }
+
+        return connections
+            .sorted {
+                if $0.state != $1.state {
+                    return $0.state < $1.state
+                }
+                return $0.processName < $1.processName
+            }
+            .prefix(200)
+            .map { $0 }
+    }
+
+    private func currentDNSInfo() -> (servers: [String], searchDomains: [String]) {
+        let output = Shell.run("/usr/sbin/scutil", arguments: ["--dns"], timeout: 10)
+        var servers: [String] = []
+        var searchDomains: [String] = []
+
+        for line in output.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("nameserver[") {
+                if let value = trimmed.split(separator: ":").last?.trimmingCharacters(in: .whitespaces), !servers.contains(value) {
+                    servers.append(value)
+                }
+            } else if trimmed.hasPrefix("search domain[") {
+                if let value = trimmed.split(separator: ":").last?.trimmingCharacters(in: .whitespaces), !searchDomains.contains(value) {
+                    searchDomains.append(value)
+                }
+            }
+        }
+
+        return (servers, searchDomains)
+    }
+
+    private func currentRouteInfo() -> (gateway: String, interface: String) {
+        let output = Shell.run("/sbin/route", arguments: ["-n", "get", "default"], timeout: 10)
+        var gateway = "Unavailable"
+        var interface = "Unavailable"
+
+        for line in output.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("gateway:") {
+                gateway = trimmed.replacingOccurrences(of: "gateway:", with: "").trimmingCharacters(in: .whitespaces)
+            } else if trimmed.hasPrefix("interface:") {
+                interface = trimmed.replacingOccurrences(of: "interface:", with: "").trimmingCharacters(in: .whitespaces)
+            }
+        }
+
+        return (gateway, interface)
+    }
+
+    private func currentWiFiNetwork(interface: String) -> String? {
+        guard interface.hasPrefix("en") else { return nil }
+        let output = Shell.run("/usr/sbin/networksetup", arguments: ["-getairportnetwork", interface], timeout: 5)
+        guard output.contains("Current Wi-Fi Network") else { return nil }
+        return output.split(separator: ":").last?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func interfaceKind(for name: String) -> String {
+        if name == "lo0" { return "Loopback" }
+        if name.hasPrefix("en") { return "Ethernet / Wi-Fi" }
+        if name.hasPrefix("awdl") { return "Apple Wireless Direct Link" }
+        if name.hasPrefix("utun") { return "Tunnel / VPN" }
+        if name.hasPrefix("bridge") { return "Bridge" }
+        if name.hasPrefix("ap") { return "Access Point" }
+        return "Interface"
+    }
+}
+
+private struct NetworkInterfaceCounter {
+    let packetsIn: UInt64
+    let packetsOut: UInt64
+    let bytesIn: UInt64
+    let bytesOut: UInt64
+}
+
+private struct RawNetworkInterface {
+    let name: String
+    let kind: String
+    let status: String
+    let mtu: Int
+    let macAddress: String?
+    let addresses: [String]
 }

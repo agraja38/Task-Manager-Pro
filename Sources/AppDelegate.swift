@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private weak var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ProcessInfo.processInfo.disableAutomaticTermination("Task Manager Pro stays available as a background monitor.")
+        ProcessInfo.processInfo.disableSuddenTermination()
         applyActivationPolicy()
         applyMenuBarMode()
         NotificationCenter.default.addObserver(
@@ -35,6 +37,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             name: .pulseTaskPresentationPreferencesDidChange,
             object: nil
         )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleSystemWake(_:)),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
     }
 
     @objc private func handleMetricsUpdate(_ notification: Notification) {
@@ -55,6 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func handlePresentationPreferenceChange(_ notification: Notification) {
         applyActivationPolicy()
+    }
+
+    @objc private func handleSystemWake(_ notification: Notification) {
+        AppState.shared.handleSystemWake()
     }
 
     private func applyActivationPolicy() {

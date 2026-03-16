@@ -3,6 +3,7 @@ import Foundation
 enum TopSection: String, CaseIterable, Identifiable {
     case processes = "Processes"
     case performance = "Performance"
+    case network = "Network"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -10,6 +11,7 @@ enum TopSection: String, CaseIterable, Identifiable {
         switch self {
         case .processes: "list.bullet.rectangle.portrait"
         case .performance: "waveform.path.ecg.rectangle"
+        case .network: "network"
         case .settings: "gearshape"
         }
     }
@@ -118,6 +120,54 @@ struct PerformanceSnapshot {
     let isCharging: Bool?
     let thermalLevel: String
     let note: String
+}
+
+struct NetworkDetailsSnapshot: Hashable {
+    let interfaces: [NetworkInterfaceSnapshot]
+    let connections: [NetworkConnectionSnapshot]
+    let dnsServers: [String]
+    let searchDomains: [String]
+    let defaultGateway: String
+    let primaryInterface: String
+    let wifiNetwork: String?
+    let capturedAt: Date
+
+    static let empty = NetworkDetailsSnapshot(
+        interfaces: [],
+        connections: [],
+        dnsServers: [],
+        searchDomains: [],
+        defaultGateway: "Unavailable",
+        primaryInterface: "Unavailable",
+        wifiNetwork: nil,
+        capturedAt: .distantPast
+    )
+}
+
+struct NetworkInterfaceSnapshot: Identifiable, Hashable {
+    var id: String { name }
+    let name: String
+    let kind: String
+    let status: String
+    let mtu: Int
+    let macAddress: String?
+    let addresses: [String]
+    let packetsIn: UInt64
+    let packetsOut: UInt64
+    let bytesIn: UInt64
+    let bytesOut: UInt64
+    let isPrimary: Bool
+}
+
+struct NetworkConnectionSnapshot: Identifiable, Hashable {
+    var id: String { "\(pid)-\(protocolName)-\(localEndpoint)-\(remoteEndpoint)-\(state)" }
+    let processName: String
+    let pid: Int32
+    let user: String
+    let protocolName: String
+    let localEndpoint: String
+    let remoteEndpoint: String
+    let state: String
 }
 
 struct UpdateFeed: Decodable {

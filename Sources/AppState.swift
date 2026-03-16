@@ -37,9 +37,12 @@ final class AppState: ObservableObject {
     @Published var memoryHistory: [TimePoint] = []
     @Published var diskHistory: [TimePoint] = []
     @Published var networkHistory: [TimePoint] = []
+    @Published var networkInHistory: [TimePoint] = []
+    @Published var networkOutHistory: [TimePoint] = []
     @Published var gpuHistory: [TimePoint] = []
     @Published var processHistory: [Int32: [TimePoint]] = [:]
     @Published var memoryProcessHistory: [Int32: [TimePoint]] = [:]
+    @Published var currentNetworkDetails = NetworkDetailsSnapshot.empty
 
     @Published var menuBarDisplayMode: MenuBarDisplayMode = UserDefaults.standard.string(forKey: "menuBarDisplayMode").flatMap(MenuBarDisplayMode.init(rawValue:)) ?? .compact {
         didSet {
@@ -64,6 +67,9 @@ final class AppState: ObservableObject {
             UserDefaults.standard.set(showsAdvancedTelemetryWidgets, forKey: "showsAdvancedTelemetryWidgets")
             if !showsAdvancedTelemetryWidgets && sortKey == .gpu {
                 sortKey = .cpu
+            }
+            if !showsAdvancedTelemetryWidgets && selectedSection == .network {
+                selectedSection = .performance
             }
         }
     }
@@ -122,15 +128,20 @@ final class AppState: ObservableObject {
         })
         let processService = self.processService
         let metricsService = self.metricsService
+        let shouldCaptureNetworkDetails = self.showsAdvancedTelemetryWidgets && self.selectedSection == .network
 
         Task.detached(priority: .userInitiated) {
             let rawProcesses = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
             let metrics = metricsService.sample(includeAdvancedTelemetry: true)
+            let networkDetails = shouldCaptureNetworkDetails ? metricsService.detailedNetworkSnapshot() : nil
 
             await MainActor.run {
                 let processes = self.applyGPUUsageEstimates(to: rawProcesses, overallGPUPercent: metrics.gpuPercent)
                 self.processes = processes
                 self.currentMetrics = metrics
+                if let networkDetails {
+                    self.currentNetworkDetails = networkDetails
+                }
                 self.appendHistory(snapshot: metrics, processes: processes)
                 if processes.isEmpty {
                     self.latestError = "Task Manager Pro could not load the process list. Try refreshing again."
@@ -180,7 +191,14 @@ final class AppState: ObservableObject {
         Task { await updater.installPreparedUpdate() }
     }
 
+    func handleSystemWake() {
+        timer?.invalidate()
+        startTimers()
+        refreshAll()
+    }
+
     private func startTimers() {
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refreshAll()
@@ -206,6 +224,8 @@ final class AppState: ObservableObject {
         memoryHistory = trimmed(memoryHistory + [TimePoint(timestamp: now, value: snapshot.memoryPercent)])
         diskHistory = trimmed(diskHistory + [TimePoint(timestamp: now, value: snapshot.diskReadMBps + snapshot.diskWriteMBps)])
         networkHistory = trimmed(networkHistory + [TimePoint(timestamp: now, value: snapshot.networkInKBps + snapshot.networkOutKBps)])
+        networkInHistory = trimmed(networkInHistory + [TimePoint(timestamp: now, value: snapshot.networkInKBps)])
+        networkOutHistory = trimmed(networkOutHistory + [TimePoint(timestamp: now, value: snapshot.networkOutKBps)])
         gpuHistory = trimmed(gpuHistory + [TimePoint(timestamp: now, value: snapshot.gpuPercent ?? 0)])
 
         for process in processes.prefix(20) {

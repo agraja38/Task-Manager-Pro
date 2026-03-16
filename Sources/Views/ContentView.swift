@@ -22,6 +22,8 @@ struct ContentView: View {
             ProcessesView()
         case .performance:
             PerformanceView()
+        case .network:
+            NetworkView()
         case .settings:
             SettingsView()
         }
@@ -29,7 +31,7 @@ struct ContentView: View {
 
     private var topNavigation: some View {
         HStack(spacing: 10) {
-            ForEach(TopSection.allCases) { section in
+            ForEach(visibleSections) { section in
                 Button {
                     appState.selectedSection = section
                 } label: {
@@ -56,6 +58,13 @@ struct ContentView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+
+    private var visibleSections: [TopSection] {
+        if appState.showsAdvancedTelemetryWidgets {
+            return TopSection.allCases
+        }
+        return TopSection.allCases.filter { $0 != .network }
     }
 
     private var bottomBar: some View {
@@ -331,6 +340,206 @@ struct PerformanceView: View {
     }
 }
 
+struct NetworkView: View {
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Network")
+                    .font(.system(size: 28, weight: .bold))
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                    MetricBadge(title: "Download", value: rateString(appState.currentMetrics.networkInKBps), color: .cyan, prominence: .large)
+                    MetricBadge(title: "Upload", value: rateString(appState.currentMetrics.networkOutKBps), color: .blue, prominence: .large)
+                    MetricBadge(title: "Connections", value: "\(appState.currentNetworkDetails.connections.count)", color: .green, prominence: .large)
+                    MetricBadge(title: "Interfaces", value: "\(appState.currentNetworkDetails.interfaces.count)", color: .orange, prominence: .large)
+                }
+
+                GroupBox("Throughput") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Live network throughput")
+                            .font(.headline)
+                        Chart {
+                            ForEach(appState.networkInHistory) { point in
+                                LineMark(
+                                    x: .value("Time", point.timestamp),
+                                    y: .value("Download", point.value)
+                                )
+                                .foregroundStyle(.cyan)
+                            }
+
+                            ForEach(appState.networkOutHistory) { point in
+                                LineMark(
+                                    x: .value("Time", point.timestamp),
+                                    y: .value("Upload", point.value)
+                                )
+                                .foregroundStyle(.blue)
+                            }
+                        }
+                        .frame(height: 190)
+
+                        HStack(spacing: 18) {
+                            networkLegend(color: .cyan, label: "Download")
+                            networkLegend(color: .blue, label: "Upload")
+                            Spacer()
+                            Text(appState.currentNetworkDetails.capturedAt, style: .time)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Routing & DNS") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        DetailRow(label: "Default Gateway", value: appState.currentNetworkDetails.defaultGateway)
+                        DetailRow(label: "Primary Interface", value: appState.currentNetworkDetails.primaryInterface)
+                        DetailRow(label: "Wi-Fi Network", value: appState.currentNetworkDetails.wifiNetwork ?? "Unavailable")
+                        DetailRow(label: "DNS Servers", value: joined(appState.currentNetworkDetails.dnsServers))
+                        DetailRow(label: "Search Domains", value: joined(appState.currentNetworkDetails.searchDomains))
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Interfaces") {
+                    VStack(spacing: 10) {
+                        ForEach(appState.currentNetworkDetails.interfaces) { interface in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(interface.name)
+                                        .font(.headline)
+                                    Text(interface.kind)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.white.opacity(0.05), in: Capsule())
+                                    if interface.isPrimary {
+                                        Text("Primary")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.cyan)
+                                    }
+                                    Spacer()
+                                    Text(interface.status)
+                                        .foregroundStyle(interface.status == "Active" ? .green : .secondary)
+                                }
+
+                                HStack(spacing: 16) {
+                                    networkMiniStat(title: "MTU", value: "\(interface.mtu)")
+                                    networkMiniStat(title: "Down", value: byteString(interface.bytesIn))
+                                    networkMiniStat(title: "Up", value: byteString(interface.bytesOut))
+                                    networkMiniStat(title: "In Packets", value: "\(interface.packetsIn)")
+                                    networkMiniStat(title: "Out Packets", value: "\(interface.packetsOut)")
+                                }
+
+                                if let macAddress = interface.macAddress, !macAddress.isEmpty {
+                                    DetailRow(label: "MAC", value: macAddress)
+                                }
+                                DetailRow(label: "Addresses", value: joined(interface.addresses))
+                            }
+                            .padding(12)
+                            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Active Connections") {
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Process").frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Proto").frame(width: 55, alignment: .leading)
+                            Text("State").frame(width: 95, alignment: .leading)
+                            Text("Local").frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Remote").frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                        ForEach(appState.currentNetworkDetails.connections) { connection in
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(connection.processName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(1)
+                                    Text("PID \(connection.pid) • \(connection.user)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                                Text(connection.protocolName)
+                                    .frame(width: 55, alignment: .leading)
+
+                                Text(connection.state)
+                                    .frame(width: 95, alignment: .leading)
+
+                                Text(connection.localEndpoint)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+
+                                Text(connection.remoteEndpoint)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                            }
+                            .font(.caption)
+                            .padding(.vertical, 6)
+
+                            if connection.id != appState.currentNetworkDetails.connections.last?.id {
+                                Divider()
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .padding(20)
+        }
+    }
+
+    private func rateString(_ kbps: Double) -> String {
+        if kbps >= 1024 {
+            return String(format: "%.2f MB/s", kbps / 1024)
+        }
+        return String(format: "%.0f KB/s", kbps)
+    }
+
+    private func byteString(_ bytes: UInt64) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .binary)
+    }
+
+    private func joined(_ values: [String]) -> String {
+        values.isEmpty ? "Unavailable" : values.joined(separator: ", ")
+    }
+
+    @ViewBuilder
+    private func networkLegend(color: Color, label: String) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func networkMiniStat(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+        }
+    }
+}
+
 struct CPUChartCard: View {
     @EnvironmentObject private var appState: AppState
     let height: CGFloat
@@ -535,7 +744,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Toggle("Show advanced telemetry widgets", isOn: $appState.showsAdvancedTelemetryWidgets)
 
-                        Text("Normal mode keeps the dashboard focused on CPU, memory, disk, and network. Advanced mode also shows the GPU and Battery & System widgets, using Activity Monitor-style GPU utilization when macOS exposes it.")
+                        Text("Normal mode keeps the dashboard focused on CPU, memory, disk, and network. Advanced mode also shows the GPU and Battery & System widgets, plus the dedicated Network tab with interface, routing, DNS, and active connection details.")
                             .foregroundStyle(.secondary)
 
                         Text("To achieve deeper GPU and thermal telemetry:")
