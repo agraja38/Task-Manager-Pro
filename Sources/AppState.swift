@@ -111,21 +111,7 @@ final class AppState: ObservableObject {
     }
 
     func refreshAll() {
-        let appMetadataByPID = Dictionary(uniqueKeysWithValues: NSWorkspace.shared.runningApplications.map { app in
-            (
-                app.processIdentifier,
-                RunningAppMetadata(
-                    pid: app.processIdentifier,
-                    localizedName: app.localizedName ?? "",
-                    bundleIdentifier: app.bundleIdentifier ?? "",
-                    executablePath: app.executableURL?.path ?? "",
-                    isActive: app.isActive,
-                    isFinishedLaunching: app.isFinishedLaunching,
-                    isRegularApp: app.activationPolicy == .regular,
-                    architecture: app.executableArchitecture == CPU_TYPE_X86_64 ? "Intel" : "Apple Silicon / Native"
-                )
-            )
-        })
+        let appMetadataByPID = runningAppMetadataByPID()
         let processService = self.processService
         let metricsService = self.metricsService
         let shouldCaptureNetworkDetails = self.showsAdvancedTelemetryWidgets && self.selectedSection == .network
@@ -204,6 +190,67 @@ final class AppState: ObservableObject {
                 self?.refreshAll()
             }
         }
+    }
+
+    private func runningAppMetadataByPID() -> [Int32: RunningAppMetadata] {
+        var metadataByPID: [Int32: RunningAppMetadata] = [:]
+
+        for app in NSWorkspace.shared.runningApplications {
+            let pid = app.processIdentifier
+            guard pid > 0 else { continue }
+
+            let candidate = RunningAppMetadata(
+                pid: pid,
+                localizedName: app.localizedName ?? "",
+                bundleIdentifier: app.bundleIdentifier ?? "",
+                executablePath: app.executableURL?.path ?? "",
+                isActive: app.isActive,
+                isFinishedLaunching: app.isFinishedLaunching,
+                isRegularApp: app.activationPolicy == .regular,
+                architecture: app.executableArchitecture == CPU_TYPE_X86_64 ? "Intel" : "Apple Silicon / Native"
+            )
+
+            if let existing = metadataByPID[pid] {
+                metadataByPID[pid] = preferredMetadata(existing, candidate)
+            } else {
+                metadataByPID[pid] = candidate
+            }
+        }
+
+        return metadataByPID
+    }
+
+    private func preferredMetadata(_ lhs: RunningAppMetadata, _ rhs: RunningAppMetadata) -> RunningAppMetadata {
+        let lhsScore = metadataQualityScore(lhs)
+        let rhsScore = metadataQualityScore(rhs)
+
+        if rhsScore > lhsScore {
+            return rhs
+        }
+
+        if lhsScore > rhsScore {
+            return lhs
+        }
+
+        if rhs.isActive && !lhs.isActive {
+            return rhs
+        }
+
+        if rhs.isRegularApp && !lhs.isRegularApp {
+            return rhs
+        }
+
+        return lhs
+    }
+
+    private func metadataQualityScore(_ metadata: RunningAppMetadata) -> Int {
+        var score = 0
+        if !metadata.localizedName.isEmpty { score += 4 }
+        if !metadata.bundleIdentifier.isEmpty { score += 3 }
+        if !metadata.executablePath.isEmpty { score += 2 }
+        if metadata.isFinishedLaunching { score += 1 }
+        if metadata.isRegularApp { score += 1 }
+        return score
     }
 
     private func applyAppearanceMode() {
