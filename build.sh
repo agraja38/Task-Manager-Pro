@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.41"
-BUILD_NUMBER="141"
+VERSION="1.0.42"
+BUILD_NUMBER="142"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.41",
-  "build": 141,
-  "notes": "Fix sleep and wake stability by resetting telemetry baselines and guarding against network counter resets after the Mac wakes.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.41/TaskManagerPro-1.0.41-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.41/TaskManagerPro-1.0.41-intel.dmg"
+  "version": "1.0.42",
+  "build": 142,
+  "notes": "Fix the updater so it reads the installed app version from the bundle instead of a hardcoded current version.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.42/TaskManagerPro-1.0.42-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.42/TaskManagerPro-1.0.42-intel.dmg"
 }
 JSON
 

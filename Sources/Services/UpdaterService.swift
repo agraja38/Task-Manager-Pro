@@ -3,6 +3,10 @@ import Foundation
 
 @MainActor
 final class UpdaterService: ObservableObject {
+    private static let bundledVersion: String = {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+    }()
+
     enum UpdatePhase: String {
         case idle
         case checking
@@ -16,9 +20,9 @@ final class UpdaterService: ObservableObject {
     @Published var phase: UpdatePhase = .idle
     @Published var progress: Double = 0
     @Published var statusText = "Up to date."
-    @Published var latestVersion = "1.0.41"
+    @Published var latestVersion = bundledVersion
     @Published var releaseNotes = ""
-    @Published var currentVersion = "1.0.41"
+    @Published var currentVersion = bundledVersion
     @Published var pendingAssetURL: String?
     @Published var pendingDownloadSizeBytes: Int64?
 
