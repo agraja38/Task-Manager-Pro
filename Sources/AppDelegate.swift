@@ -39,6 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
+            selector: #selector(handleSystemSleep(_:)),
+            name: NSWorkspace.willSleepNotification,
+            object: nil
+        )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
             selector: #selector(handleSystemWake(_:)),
             name: NSWorkspace.didWakeNotification,
             object: nil
@@ -63,6 +69,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func handlePresentationPreferenceChange(_ notification: Notification) {
         applyActivationPolicy()
+    }
+
+    @objc private func handleSystemSleep(_ notification: Notification) {
+        AppState.shared.handleSystemSleep()
     }
 
     @objc private func handleSystemWake(_ notification: Notification) {

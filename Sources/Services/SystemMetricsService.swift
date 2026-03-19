@@ -14,6 +14,17 @@ final class SystemMetricsService {
     private var previousDiskTotals: (read: Double, write: Double)?
     private var previousDiskTimestamp: Date?
 
+    func resetSamplingBaselines() {
+        if let previousCPUInfo {
+            vm_deallocate(mach_task_self_, vm_address_t(bitPattern: previousCPUInfo), vm_size_t(previousCPUInfoCount))
+        }
+        previousCPUInfo = nil
+        previousCPUInfoCount = 0
+        previousNetworkTotals = nil
+        previousDiskTotals = nil
+        previousDiskTimestamp = nil
+    }
+
     func sample(includeAdvancedTelemetry: Bool) -> PerformanceSnapshot {
         let cpu = currentCPUPercent()
         let memory = currentMemory()
@@ -166,8 +177,8 @@ final class SystemMetricsService {
         guard let previous = previousNetworkTotals else { return (0, 0) }
 
         return (
-            max(0, Double(inBytes - previous.input) / 1024 / 2),
-            max(0, Double(outBytes - previous.output) / 1024 / 2)
+            bytesDelta(current: inBytes, previous: previous.input) / 1024 / 2,
+            bytesDelta(current: outBytes, previous: previous.output) / 1024 / 2
         )
     }
 
@@ -268,6 +279,13 @@ final class SystemMetricsService {
         var size = MemoryLayout<UInt64>.size
         sysctlbyname(name, &value, &size, nil, 0)
         return value
+    }
+
+    private func bytesDelta(current: UInt64, previous: UInt64) -> Double {
+        guard current >= previous else {
+            return 0
+        }
+        return Double(current - previous)
     }
 
     private func currentInterfaceCounters() -> [String: NetworkInterfaceCounter] {

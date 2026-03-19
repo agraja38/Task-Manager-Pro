@@ -178,9 +178,15 @@ final class AppState: ObservableObject {
     }
 
     func handleSystemWake() {
+        metricsService.resetSamplingBaselines()
         timer?.invalidate()
         startTimers()
         refreshAll()
+    }
+
+    func handleSystemSleep() {
+        timer?.invalidate()
+        metricsService.resetSamplingBaselines()
     }
 
     private func startTimers() {
