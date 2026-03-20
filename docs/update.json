@@ -1,7 +1,7 @@
 {
-  "version": "1.0.42",
-  "build": 142,
-  "notes": "Fix the updater so it reads the installed app version from the bundle instead of a hardcoded current version.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.42/TaskManagerPro-1.0.42-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.42/TaskManagerPro-1.0.42-intel.dmg"
+  "version": "1.0.43",
+  "build": 143,
+  "notes": "Add a Settings action to ask macOS to clear reclaimable memory cache and refresh RAM readings.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.43/TaskManagerPro-1.0.43-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.43/TaskManagerPro-1.0.43-intel.dmg"
 }

@@ -779,6 +779,25 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 8)
                 }
+
+                GroupBox("Memory Cleanup") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Ask macOS to reclaim purgeable cache and refresh the RAM readings. This can help free inactive cache, but it does not forcibly empty all memory used by apps.")
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 12) {
+                            Button(appState.isClearingMemory ? "Clearing Memory..." : "Clear Memory") {
+                                appState.clearMemory()
+                            }
+                            .disabled(appState.isClearingMemory)
+
+                            Text("May require administrator approval.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
             }
             .padding(20)
         }
