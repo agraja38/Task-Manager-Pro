@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.44"
-BUILD_NUMBER="144"
+VERSION="1.0.45"
+BUILD_NUMBER="145"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -15,6 +15,8 @@ trap cleanup EXIT
 
 ARM_BIN="$BUILD_DIR/${APP_NAME}-arm64"
 X64_BIN="$BUILD_DIR/${APP_NAME}-x86_64"
+ARM_SHIM_OBJ="$BUILD_DIR/PrivilegedExecShim-arm64.o"
+X64_SHIM_OBJ="$BUILD_DIR/PrivilegedExecShim-x86_64.o"
 ICONSET_DIR="$ROOT_DIR/${APP_NAME}.iconset"
 ICNS_PATH="$BUILD_DIR/${APP_NAME}.icns"
 APPLE_SILICON_DIR="$BUILD_DIR/apple-silicon"
@@ -37,6 +39,7 @@ COMMON_FLAGS=(
   -framework Charts
   -framework IOKit
   -framework ServiceManagement
+  -framework Security
 )
 
 SOURCE_FILES=("${(@f)$(find "$ROOT_DIR/Sources" -name '*.swift' -print | sort)}")
@@ -44,8 +47,11 @@ SOURCE_FILES=("${(@f)$(find "$ROOT_DIR/Sources" -name '*.swift' -print | sort)}"
 swift "$ROOT_DIR/generate_icon.swift"
 iconutil -c icns "$ICONSET_DIR" -o "$ICNS_PATH"
 
-swiftc -target arm64-apple-macos13.0 "${COMMON_FLAGS[@]}" "${SOURCE_FILES[@]}" -o "$ARM_BIN"
-swiftc -target x86_64-apple-macos13.0 "${COMMON_FLAGS[@]}" "${SOURCE_FILES[@]}" -o "$X64_BIN"
+clang -target arm64-apple-macos13.0 -c "$ROOT_DIR/Support/PrivilegedExecShim.c" -o "$ARM_SHIM_OBJ"
+clang -target x86_64-apple-macos13.0 -c "$ROOT_DIR/Support/PrivilegedExecShim.c" -o "$X64_SHIM_OBJ"
+
+swiftc -target arm64-apple-macos13.0 "${COMMON_FLAGS[@]}" "$ARM_SHIM_OBJ" "${SOURCE_FILES[@]}" -o "$ARM_BIN"
+swiftc -target x86_64-apple-macos13.0 "${COMMON_FLAGS[@]}" "$X64_SHIM_OBJ" "${SOURCE_FILES[@]}" -o "$X64_BIN"
 
 create_app_bundle() {
   local bin_path="$1"
@@ -91,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.44",
-  "build": 144,
-  "notes": "Make the app's memory cleanup warning one-time and add Clear Memory to the menu bar dropdown.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.44/TaskManagerPro-1.0.44-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.44/TaskManagerPro-1.0.44-intel.dmg"
+  "version": "1.0.45",
+  "build": 145,
+  "notes": "Replace repeated osascript memory cleanup prompts with a reusable privileged execution path and keep Clear Memory available from the menu bar.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.45/TaskManagerPro-1.0.45-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.45/TaskManagerPro-1.0.45-intel.dmg"
 }
 JSON
 

@@ -1,7 +1,7 @@
 {
-  "version": "1.0.44",
-  "build": 144,
-  "notes": "Make the app's memory cleanup warning one-time and add Clear Memory to the menu bar dropdown.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.44/TaskManagerPro-1.0.44-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.44/TaskManagerPro-1.0.44-intel.dmg"
+  "version": "1.0.45",
+  "build": 145,
+  "notes": "Replace repeated osascript memory cleanup prompts with a reusable privileged execution path and keep Clear Memory available from the menu bar.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.45/TaskManagerPro-1.0.45-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.45/TaskManagerPro-1.0.45-intel.dmg"
 }

@@ -80,6 +80,7 @@ final class AppState: ObservableObject {
 
     private let processService = ProcessMonitorService()
     private let metricsService = SystemMetricsService()
+    private let memoryCleanupService = MemoryCleanupService()
     private var timer: Timer?
 
     private init() {
@@ -196,9 +197,10 @@ final class AppState: ObservableObject {
 
         isClearingMemory = true
         latestError = "Requesting macOS memory cleanup..."
+        let memoryCleanupService = self.memoryCleanupService
 
         Task.detached(priority: .userInitiated) {
-            let result = Self.runMemoryCleanup()
+            let result = memoryCleanupService.clearReclaimableMemory()
 
             await MainActor.run {
                 self.isClearingMemory = false
@@ -289,39 +291,6 @@ final class AppState: ObservableObject {
         if metadata.isFinishedLaunching { score += 1 }
         if metadata.isRegularApp { score += 1 }
         return score
-    }
-
-    nonisolated private static func runMemoryCleanup() -> (success: Bool, message: String) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = [
-            "-e",
-            #"do shell script "/usr/sbin/purge" with administrator privileges"#
-        ]
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let errorText = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-            guard process.terminationStatus == 0 else {
-                if errorText.localizedCaseInsensitiveContains("user canceled") {
-                    return (false, "Memory cleanup was canceled.")
-                }
-                return (false, errorText.isEmpty ? "macOS could not clear reclaimable memory." : errorText)
-            }
-
-            return (true, "macOS cleared reclaimable memory where possible.")
-        } catch {
-            return (false, "Memory cleanup failed: \(error.localizedDescription)")
-        }
     }
 
     private func applyAppearanceMode() {
