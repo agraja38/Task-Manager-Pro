@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.43"
-BUILD_NUMBER="143"
+VERSION="1.0.44"
+BUILD_NUMBER="144"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -91,11 +91,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.43",
-  "build": 143,
-  "notes": "Add a Settings action to ask macOS to clear reclaimable memory cache and refresh RAM readings.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.43/TaskManagerPro-1.0.43-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.43/TaskManagerPro-1.0.43-intel.dmg"
+  "version": "1.0.44",
+  "build": 144,
+  "notes": "Make the app's memory cleanup warning one-time and add Clear Memory to the menu bar dropdown.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.44/TaskManagerPro-1.0.44-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.44/TaskManagerPro-1.0.44-intel.dmg"
 }
 JSON
 

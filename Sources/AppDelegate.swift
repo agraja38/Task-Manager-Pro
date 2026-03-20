@@ -102,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let menu = NSMenu()
             menu.addItem(withTitle: "Open Task Manager Pro", action: #selector(openMainWindow), keyEquivalent: "")
             menu.addItem(NSMenuItem.separator())
+            menu.addItem(withTitle: "Clear Memory", action: #selector(clearMemory), keyEquivalent: "")
             menu.addItem(withTitle: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
             menu.addItem(NSMenuItem.separator())
             menu.addItem(withTitle: "Quit Task Manager Pro", action: #selector(quitApp), keyEquivalent: "q")
@@ -161,6 +162,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func checkForUpdates() {
         Task { await AppState.shared.updater.checkForUpdates() }
         openMainWindow()
+    }
+
+    @objc private func clearMemory() {
+        AppState.shared.clearMemory()
     }
 
     @objc private func quitApp() {

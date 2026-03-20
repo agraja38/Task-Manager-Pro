@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class AppState: ObservableObject {
     static let shared = AppState()
+    private static let hasSeenMemoryCleanupWarningKey = "hasSeenMemoryCleanupWarning"
 
     @Published var selectedSection: TopSection = .processes
     @Published var cpuGraphMode: CPUGraphMode = UserDefaults.standard.string(forKey: "cpuGraphMode").flatMap(CPUGraphMode.init(rawValue:)) ?? .overall {
@@ -181,14 +182,17 @@ final class AppState: ObservableObject {
     func clearMemory() {
         guard !isClearingMemory else { return }
 
-        let alert = NSAlert()
-        alert.messageText = "Clear reclaimable memory?"
-        alert.informativeText = "Task Manager Pro will ask macOS to purge reclaimable disk cache and refresh memory readings. This does not force-close apps or fully empty RAM, and macOS may ask for an administrator password."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Clear Memory")
-        alert.addButton(withTitle: "Cancel")
+        if !UserDefaults.standard.bool(forKey: Self.hasSeenMemoryCleanupWarningKey) {
+            let alert = NSAlert()
+            alert.messageText = "Clear reclaimable memory?"
+            alert.informativeText = "Task Manager Pro will ask macOS to purge reclaimable disk cache and refresh memory readings. This does not force-close apps or fully empty RAM, and macOS may ask for an administrator password."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Clear Memory")
+            alert.addButton(withTitle: "Cancel")
 
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            UserDefaults.standard.set(true, forKey: Self.hasSeenMemoryCleanupWarningKey)
+        }
 
         isClearingMemory = true
         latestError = "Requesting macOS memory cleanup..."
