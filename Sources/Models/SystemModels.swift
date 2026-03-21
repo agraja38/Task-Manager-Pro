@@ -4,6 +4,7 @@ enum TopSection: String, CaseIterable, Identifiable {
     case processes = "Processes"
     case performance = "Performance"
     case network = "Network"
+    case thermals = "Thermals"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -12,6 +13,7 @@ enum TopSection: String, CaseIterable, Identifiable {
         case .processes: "list.bullet.rectangle.portrait"
         case .performance: "waveform.path.ecg.rectangle"
         case .network: "network"
+        case .thermals: "thermometer.medium"
         case .settings: "gearshape"
         }
     }
@@ -169,6 +171,40 @@ struct NetworkConnectionSnapshot: Identifiable, Hashable {
     let localEndpoint: String
     let remoteEndpoint: String
     let state: String
+}
+
+struct ThermalDetailsSnapshot: Hashable {
+    let cpuTemperatureC: Double?
+    let gpuTemperatureC: Double?
+    let fanSpeedsRPM: [FanSpeedSnapshot]
+    let hottestSensors: [ThermalSensorSnapshot]
+    let thermalLevel: String
+    let note: String
+    let requiresPrivilege: Bool
+    let capturedAt: Date
+
+    static let empty = ThermalDetailsSnapshot(
+        cpuTemperatureC: nil,
+        gpuTemperatureC: nil,
+        fanSpeedsRPM: [],
+        hottestSensors: [],
+        thermalLevel: "Unknown",
+        note: "Detailed temperatures and fan speeds become available after macOS grants privileged telemetry access.",
+        requiresPrivilege: true,
+        capturedAt: .distantPast
+    )
+}
+
+struct ThermalSensorSnapshot: Identifiable, Hashable {
+    var id: String { name }
+    let name: String
+    let valueC: Double
+}
+
+struct FanSpeedSnapshot: Identifiable, Hashable {
+    var id: String { name }
+    let name: String
+    let rpm: Int
 }
 
 struct UpdateFeed: Decodable {

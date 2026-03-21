@@ -24,6 +24,8 @@ struct ContentView: View {
             PerformanceView()
         case .network:
             NetworkView()
+        case .thermals:
+            ThermalsView()
         case .settings:
             SettingsView()
         }
@@ -64,7 +66,7 @@ struct ContentView: View {
         if appState.showsAdvancedTelemetryWidgets {
             return TopSection.allCases
         }
-        return TopSection.allCases.filter { $0 != .network }
+        return TopSection.allCases.filter { $0 != .network && $0 != .thermals }
     }
 
     private var bottomBar: some View {
@@ -574,6 +576,97 @@ struct NetworkView: View {
     }
 }
 
+struct ThermalsView: View {
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Thermals")
+                    .font(.system(size: 28, weight: .bold))
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                    MetricBadge(title: "CPU Temp", value: temperatureString(appState.currentThermalDetails.cpuTemperatureC), color: .red, prominence: .large)
+                    MetricBadge(title: "GPU Temp", value: temperatureString(appState.currentThermalDetails.gpuTemperatureC), color: .orange, prominence: .large)
+                    MetricBadge(title: "Thermal State", value: appState.currentThermalDetails.thermalLevel, color: .pink, prominence: .large)
+                }
+
+                GroupBox("Overview") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        DetailRow(label: "Thermal State", value: appState.currentThermalDetails.thermalLevel)
+                        DetailRow(label: "Detailed Access", value: appState.currentThermalDetails.requiresPrivilege ? "Needs privileged telemetry" : "Available")
+                        DetailRow(label: "Last Sample", value: appState.currentThermalDetails.capturedAt == .distantPast ? "Not sampled yet" : DateFormatter.localizedString(from: appState.currentThermalDetails.capturedAt, dateStyle: .none, timeStyle: .medium))
+                        Text(appState.currentThermalDetails.note)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Temperatures") {
+                    VStack(spacing: 10) {
+                        if appState.currentThermalDetails.hottestSensors.isEmpty {
+                            Text("Open this tab to let Task Manager Pro request detailed thermal telemetry once. After access is granted, this view shows the hottest sensors macOS exposes.")
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ForEach(appState.currentThermalDetails.hottestSensors) { sensor in
+                                HStack {
+                                    Text(sensor.name)
+                                        .font(.headline)
+                                    Spacer()
+                                    Text(String(format: "%.1f C", sensor.valueC))
+                                        .font(.headline.monospacedDigit())
+                                        .foregroundStyle(.red)
+                                }
+                                .padding(12)
+                                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Fans") {
+                    VStack(spacing: 10) {
+                        if appState.currentThermalDetails.fanSpeedsRPM.isEmpty {
+                            Text("Fan speed data is unavailable until privileged thermal telemetry is granted, or this Mac does not expose fan RPM data through powermetrics.")
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ForEach(appState.currentThermalDetails.fanSpeedsRPM) { fan in
+                                HStack {
+                                    Text(fan.name)
+                                        .font(.headline)
+                                    Spacer()
+                                    Text("\(fan.rpm) rpm")
+                                        .font(.headline.monospacedDigit())
+                                }
+                                .padding(12)
+                                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .padding(20)
+        }
+    }
+
+    private func temperatureString(_ value: Double?) -> String {
+        guard let value else { return "--" }
+        return String(format: "%.1f C", value)
+    }
+}
+
 struct CPUChartCard: View {
     @EnvironmentObject private var appState: AppState
     let height: CGFloat
@@ -788,6 +881,7 @@ struct SettingsView: View {
                             Text("• GPU usage in the Performance and Processes views")
                             Text("• Cached Files monitoring with quick cache clearing")
                             Text("• A dedicated Network tab with interfaces, routing, DNS, and live connections")
+                            Text("• A dedicated Thermals tab with temperatures, fan speeds, and thermal state")
                             Text("• Expanded sorting and live telemetry for power-user workflows")
                         }
                         .foregroundStyle(.secondary)

@@ -47,6 +47,7 @@ final class AppState: ObservableObject {
     @Published var processHistory: [Int32: [TimePoint]] = [:]
     @Published var memoryProcessHistory: [Int32: [TimePoint]] = [:]
     @Published var currentNetworkDetails = NetworkDetailsSnapshot.empty
+    @Published var currentThermalDetails = ThermalDetailsSnapshot.empty
 
     @Published var menuBarDisplayMode: MenuBarDisplayMode = UserDefaults.standard.string(forKey: "menuBarDisplayMode").flatMap(MenuBarDisplayMode.init(rawValue:)) ?? .compact {
         didSet {
@@ -72,7 +73,7 @@ final class AppState: ObservableObject {
             if !showsAdvancedTelemetryWidgets && sortKey == .gpu {
                 sortKey = .cpu
             }
-            if !showsAdvancedTelemetryWidgets && selectedSection == .network {
+            if !showsAdvancedTelemetryWidgets && (selectedSection == .network || selectedSection == .thermals) {
                 selectedSection = .performance
             }
         }
@@ -83,6 +84,7 @@ final class AppState: ObservableObject {
     private let processService = ProcessMonitorService()
     private let metricsService = SystemMetricsService()
     private let memoryCleanupService = MemoryCleanupService()
+    private let thermalService = ThermalTelemetryService()
     private var timer: Timer?
 
     private init() {
@@ -119,12 +121,15 @@ final class AppState: ObservableObject {
         let appMetadataByPID = runningAppMetadataByPID()
         let processService = self.processService
         let metricsService = self.metricsService
+        let thermalService = self.thermalService
         let shouldCaptureNetworkDetails = self.showsAdvancedTelemetryWidgets && self.selectedSection == .network
+        let shouldCaptureThermalDetails = self.showsAdvancedTelemetryWidgets && self.selectedSection == .thermals
 
         Task.detached(priority: .userInitiated) {
             let rawProcesses = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)
             let metrics = metricsService.sample(includeAdvancedTelemetry: true)
             let networkDetails = shouldCaptureNetworkDetails ? metricsService.detailedNetworkSnapshot() : nil
+            let thermalDetails = shouldCaptureThermalDetails ? thermalService.sample(currentThermalLevel: metrics.thermalLevel) : nil
 
             await MainActor.run {
                 let processes = self.applyGPUUsageEstimates(to: rawProcesses, overallGPUPercent: metrics.gpuPercent)
@@ -132,6 +137,9 @@ final class AppState: ObservableObject {
                 self.currentMetrics = metrics
                 if let networkDetails {
                     self.currentNetworkDetails = networkDetails
+                }
+                if let thermalDetails {
+                    self.currentThermalDetails = thermalDetails
                 }
                 self.appendHistory(snapshot: metrics, processes: processes)
                 if processes.isEmpty {

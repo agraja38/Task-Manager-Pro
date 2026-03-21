@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.51"
-BUILD_NUMBER="151"
+VERSION="1.0.52"
+BUILD_NUMBER="152"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.51",
-  "build": 151,
-  "notes": "Fix RAM usage by using the physical compressor footprint from vm_stat so compressed memory matches Activity Monitor more closely.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.51/TaskManagerPro-1.0.51-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.51/TaskManagerPro-1.0.51-intel.dmg"
+  "version": "1.0.52",
+  "build": 152,
+  "notes": "Add an advanced-only Thermals tab with thermal state, temperatures, and fan speeds using privileged telemetry when macOS grants access.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.52/TaskManagerPro-1.0.52-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.52/TaskManagerPro-1.0.52-intel.dmg"
 }
 JSON
 
