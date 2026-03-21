@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.47"
-BUILD_NUMBER="147"
+VERSION="1.0.48"
+BUILD_NUMBER="148"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.47",
-  "build": 147,
-  "notes": "Match Activity Monitor memory used more closely by counting internal memory the same way instead of subtracting purgeable pages from the used total.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.47/TaskManagerPro-1.0.47-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.47/TaskManagerPro-1.0.47-intel.dmg"
+  "version": "1.0.48",
+  "build": 148,
+  "notes": "Use the macOS physical memory summary for displayed RAM usage and add advanced cached-files monitoring with cache clear actions in Processes and Performance.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.48/TaskManagerPro-1.0.48-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.48/TaskManagerPro-1.0.48-intel.dmg"
 }
 JSON
 

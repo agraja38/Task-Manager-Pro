@@ -8,6 +8,13 @@ final class SystemMetricsService {
         let perCorePercent: [Double]
     }
 
+    private struct MemorySnapshot {
+        let percent: Double
+        let usedGB: Double
+        let totalGB: Double
+        let cachedFilesGB: Double
+    }
+
     private var previousCPUInfo: processor_info_array_t?
     private var previousCPUInfoCount: mach_msg_type_number_t = 0
     private var previousNetworkTotals: (input: UInt64, output: UInt64)?
@@ -40,6 +47,7 @@ final class SystemMetricsService {
             memoryPercent: memory.percent,
             usedMemoryGB: memory.usedGB,
             totalMemoryGB: memory.totalGB,
+            cachedFilesGB: memory.cachedFilesGB,
             diskReadMBps: disk.read,
             diskWriteMBps: disk.write,
             networkInKBps: network.input,
@@ -145,7 +153,7 @@ final class SystemMetricsService {
         )
     }
 
-    private func currentMemory() -> (percent: Double, usedGB: Double, totalGB: Double) {
+    private func currentMemory() -> MemorySnapshot {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
         let result = withUnsafeMutablePointer(to: &stats) {
@@ -154,19 +162,47 @@ final class SystemMetricsService {
             }
         }
 
-        guard result == KERN_SUCCESS else { return (0, 0, 0) }
+        let totalBytes = Double(Self.sysctlUInt64(name: "hw.memsize"))
+        guard totalBytes > 0 else { return MemorySnapshot(percent: 0, usedGB: 0, totalGB: 0, cachedFilesGB: 0) }
+        guard result == KERN_SUCCESS else {
+            let usedBytes = currentTopMemoryUsedBytes() ?? 0
+            return MemorySnapshot(
+                percent: (usedBytes / totalBytes) * 100,
+                usedGB: usedBytes / 1_073_741_824,
+                totalGB: totalBytes / 1_073_741_824,
+                cachedFilesGB: 0
+            )
+        }
 
         let pageSize = Double(vm_kernel_page_size)
-        let usedPages = UInt64(stats.internal_page_count) + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)
-        let usedBytes = Double(usedPages) * pageSize
-        let totalBytes = Double(Self.sysctlUInt64(name: "hw.memsize"))
+        let fallbackUsedBytes = Double(UInt64(stats.internal_page_count) + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)) * pageSize
+        let usedBytes = currentTopMemoryUsedBytes() ?? fallbackUsedBytes
+        let cachedFilesBytes = Double(UInt64(stats.external_page_count) + UInt64(stats.purgeable_count)) * pageSize
 
-        guard totalBytes > 0 else { return (0, 0, 0) }
-        return (
-            (usedBytes / totalBytes) * 100,
-            usedBytes / 1_073_741_824,
-            totalBytes / 1_073_741_824
+        return MemorySnapshot(
+            percent: (usedBytes / totalBytes) * 100,
+            usedGB: usedBytes / 1_073_741_824,
+            totalGB: totalBytes / 1_073_741_824,
+            cachedFilesGB: cachedFilesBytes / 1_073_741_824
         )
+    }
+
+    private func currentTopMemoryUsedBytes() -> Double? {
+        let output = Shell.run("/usr/bin/top", arguments: ["-l", "1", "-n", "0"])
+        guard
+            let physMemLine = output.split(separator: "\n").first(where: { $0.contains("PhysMem:") }),
+            let range = String(physMemLine).range(of: #"PhysMem:\s*([0-9.]+[KMGTP])\s+used"#, options: .regularExpression)
+        else {
+            return nil
+        }
+
+        let matched = String(String(physMemLine)[range])
+        let token = matched
+            .replacingOccurrences(of: "PhysMem:", with: "")
+            .replacingOccurrences(of: "used", with: "")
+            .trimmingCharacters(in: .whitespaces)
+
+        return Self.byteCount(from: token)
     }
 
     private func currentNetwork() -> (input: Double, output: Double) {
@@ -280,6 +316,21 @@ final class SystemMetricsService {
         var size = MemoryLayout<UInt64>.size
         sysctlbyname(name, &value, &size, nil, 0)
         return value
+    }
+
+    private static func byteCount(from token: String) -> Double? {
+        guard let unit = token.last else { return nil }
+        let numberPart = String(token.dropLast())
+        guard let number = Double(numberPart) else { return nil }
+
+        switch unit.uppercased() {
+        case "K": return number * 1_024
+        case "M": return number * 1_048_576
+        case "G": return number * 1_073_741_824
+        case "T": return number * 1_099_511_627_776
+        case "P": return number * 1_125_899_906_842_624
+        default: return nil
+        }
     }
 
     private func bytesDelta(current: UInt64, previous: UInt64) -> Double {

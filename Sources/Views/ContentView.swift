@@ -103,6 +103,7 @@ struct ProcessesView: View {
                     MetricBadge(title: "Memory", value: String(format: "%.0f%%", appState.currentMetrics.memoryPercent), color: .blue, prominence: .large)
                     if appState.showsAdvancedTelemetryWidgets {
                         MetricBadge(title: "GPU", value: gpuSummary, color: .purple, prominence: .large)
+                        MetricBadge(title: "Cache", value: cacheSummary, color: .mint, prominence: .large)
                     }
                     MetricBadge(title: "Network", value: networkSummary, color: .cyan, prominence: .large)
                 }
@@ -125,6 +126,13 @@ struct ProcessesView: View {
                     }
                 }
                 .frame(width: 140)
+
+                if appState.showsAdvancedTelemetryWidgets {
+                    Button(appState.isClearingMemory ? "Clearing Cache..." : "Clear Cache") {
+                        appState.clearCache()
+                    }
+                    .disabled(appState.isClearingMemory)
+                }
             }
         }
     }
@@ -146,6 +154,10 @@ struct ProcessesView: View {
             return "--"
         }
         return String(format: "%.0f%%", gpuPercent)
+    }
+
+    private var cacheSummary: String {
+        String(format: "%.1f GB", appState.currentMetrics.cachedFilesGB)
     }
 }
 
@@ -303,40 +315,63 @@ struct PerformanceView: View {
             let normalCPUHeight = max(230, min(availableHeight * 0.48, 290))
             let normalSecondaryHeight = max(118, min(136, (availableHeight - normalCPUHeight - 36) / 2))
             let normalNetworkHeight = max(108, normalSecondaryHeight - 14)
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Performance")
-                    .font(.system(size: 28, weight: .bold))
-
+            Group {
                 if appState.showsAdvancedTelemetryWidgets {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
-                        CPUChartCard(height: advancedCardHeight, allowsCoreScrolling: true)
-                        MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: advancedCardHeight)
-                        MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: advancedCardHeight)
-                        MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: advancedCardHeight)
-                        MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: advancedCardHeight)
-                        BatteryCard(height: advancedCardHeight)
+                    ScrollView {
+                        content(
+                            advancedCardHeight: advancedCardHeight,
+                            normalCPUHeight: normalCPUHeight,
+                            normalSecondaryHeight: normalSecondaryHeight,
+                            normalNetworkHeight: normalNetworkHeight
+                        )
                     }
                 } else {
-                    Grid(horizontalSpacing: 18, verticalSpacing: 18) {
-                        GridRow {
-                            CPUChartCard(height: normalCPUHeight, allowsCoreScrolling: false)
-                                .gridCellColumns(2)
-                        }
-                        GridRow {
-                            MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: normalSecondaryHeight)
-                            MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: normalSecondaryHeight)
-                        }
-                        GridRow {
-                            MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: normalNetworkHeight)
-                                .gridCellColumns(2)
-                        }
-                    }
+                    content(
+                        advancedCardHeight: advancedCardHeight,
+                        normalCPUHeight: normalCPUHeight,
+                        normalSecondaryHeight: normalSecondaryHeight,
+                        normalNetworkHeight: normalNetworkHeight
+                    )
                 }
-
             }
-            .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+    }
+
+    @ViewBuilder
+    private func content(advancedCardHeight: CGFloat, normalCPUHeight: CGFloat, normalSecondaryHeight: CGFloat, normalNetworkHeight: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Performance")
+                .font(.system(size: 28, weight: .bold))
+
+            if appState.showsAdvancedTelemetryWidgets {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
+                    CPUChartCard(height: advancedCardHeight, allowsCoreScrolling: true)
+                    MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: advancedCardHeight)
+                    CacheFilesCard(height: advancedCardHeight)
+                    MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: advancedCardHeight)
+                    MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: advancedCardHeight)
+                    MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: advancedCardHeight)
+                    BatteryCard(height: advancedCardHeight)
+                }
+            } else {
+                Grid(horizontalSpacing: 18, verticalSpacing: 18) {
+                    GridRow {
+                        CPUChartCard(height: normalCPUHeight, allowsCoreScrolling: false)
+                            .gridCellColumns(2)
+                    }
+                    GridRow {
+                        MetricChartCard(title: "Memory", subtitle: String(format: "%.1f / %.1f GB", appState.currentMetrics.usedMemoryGB, appState.currentMetrics.totalMemoryGB), history: appState.memoryHistory, color: .blue, yLabel: "%", height: normalSecondaryHeight)
+                        MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: normalSecondaryHeight)
+                    }
+                    GridRow {
+                        MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: normalNetworkHeight)
+                            .gridCellColumns(2)
+                    }
+                }
+            }
+        }
+        .padding(20)
     }
 }
 
@@ -782,12 +817,12 @@ struct SettingsView: View {
 
                 GroupBox("Memory Cleanup") {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Ask macOS to reclaim purgeable cache and refresh the RAM readings. This can help free inactive cache, but it does not forcibly empty all memory used by apps.")
+                        Text("Ask macOS to clear reclaimable cache and refresh the RAM and cached-files readings. This helps free cache where macOS allows it, but it does not force-close apps or instantly empty every memory bucket.")
                             .foregroundStyle(.secondary)
 
                         HStack(spacing: 12) {
-                            Button(appState.isClearingMemory ? "Clearing Memory..." : "Clear Memory") {
-                                appState.clearMemory()
+                            Button(appState.isClearingMemory ? "Clearing Cache..." : "Clear Cache") {
+                                appState.clearCache()
                             }
                             .disabled(appState.isClearingMemory)
 
@@ -800,6 +835,47 @@ struct SettingsView: View {
                 }
             }
             .padding(20)
+        }
+    }
+}
+
+struct CacheFilesCard: View {
+    @EnvironmentObject private var appState: AppState
+    let height: CGFloat
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Cached Files").font(.headline)
+                    Spacer()
+                    Button(appState.isClearingMemory ? "Clearing..." : "Clear Cache") {
+                        appState.clearCache()
+                    }
+                    .disabled(appState.isClearingMemory)
+                    .buttonStyle(.borderless)
+                }
+
+                Text(String(format: "%.1f GB reclaimable cache", appState.currentMetrics.cachedFilesGB))
+                    .foregroundStyle(.secondary)
+
+                Chart(appState.cacheHistory) { point in
+                    AreaMark(
+                        x: .value("Time", point.timestamp),
+                        y: .value("GB", point.value)
+                    )
+                    .foregroundStyle(Color.mint.opacity(0.12))
+
+                    LineMark(
+                        x: .value("Time", point.timestamp),
+                        y: .value("GB", point.value)
+                    )
+                    .foregroundStyle(Color.mint)
+                    .lineStyle(.init(lineWidth: 2))
+                }
+                .frame(height: max(110, height - 76))
+            }
+            .padding(.vertical, 8)
         }
     }
 }

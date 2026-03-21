@@ -24,6 +24,7 @@ final class AppState: ObservableObject {
         memoryPercent: 0,
         usedMemoryGB: 0,
         totalMemoryGB: 0,
+        cachedFilesGB: 0,
         diskReadMBps: 0,
         diskWriteMBps: 0,
         networkInKBps: 0,
@@ -37,6 +38,7 @@ final class AppState: ObservableObject {
     @Published var cpuHistory: [TimePoint] = []
     @Published var perCoreCPUHistory: [[TimePoint]] = []
     @Published var memoryHistory: [TimePoint] = []
+    @Published var cacheHistory: [TimePoint] = []
     @Published var diskHistory: [TimePoint] = []
     @Published var networkHistory: [TimePoint] = []
     @Published var networkInHistory: [TimePoint] = []
@@ -211,6 +213,10 @@ final class AppState: ObservableObject {
         }
     }
 
+    func clearCache() {
+        clearMemory()
+    }
+
     func handleSystemWake() {
         metricsService.resetSamplingBaselines()
         timer?.invalidate()
@@ -309,6 +315,7 @@ final class AppState: ObservableObject {
         cpuHistory = trimmed(cpuHistory + [TimePoint(timestamp: now, value: snapshot.cpuPercent)])
         syncPerCoreHistory(with: snapshot.perCoreCPUPercent, timestamp: now)
         memoryHistory = trimmed(memoryHistory + [TimePoint(timestamp: now, value: snapshot.memoryPercent)])
+        cacheHistory = trimmed(cacheHistory + [TimePoint(timestamp: now, value: snapshot.cachedFilesGB)])
         diskHistory = trimmed(diskHistory + [TimePoint(timestamp: now, value: snapshot.diskReadMBps + snapshot.diskWriteMBps)])
         networkHistory = trimmed(networkHistory + [TimePoint(timestamp: now, value: snapshot.networkInKBps + snapshot.networkOutKBps)])
         networkInHistory = trimmed(networkInHistory + [TimePoint(timestamp: now, value: snapshot.networkInKBps)])

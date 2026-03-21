@@ -111,6 +111,7 @@ struct PerformanceSnapshot {
     let memoryPercent: Double
     let usedMemoryGB: Double
     let totalMemoryGB: Double
+    let cachedFilesGB: Double
     let diskReadMBps: Double
     let diskWriteMBps: Double
     let networkInKBps: Double
