@@ -165,18 +165,12 @@ final class SystemMetricsService {
         let totalBytes = Double(Self.sysctlUInt64(name: "hw.memsize"))
         guard totalBytes > 0 else { return MemorySnapshot(percent: 0, usedGB: 0, totalGB: 0, cachedFilesGB: 0) }
         guard result == KERN_SUCCESS else {
-            let usedBytes = currentTopMemoryUsedBytes() ?? 0
-            return MemorySnapshot(
-                percent: (usedBytes / totalBytes) * 100,
-                usedGB: usedBytes / 1_073_741_824,
-                totalGB: totalBytes / 1_073_741_824,
-                cachedFilesGB: 0
-            )
+            return MemorySnapshot(percent: 0, usedGB: 0, totalGB: totalBytes / 1_073_741_824, cachedFilesGB: 0)
         }
 
         let pageSize = Double(vm_kernel_page_size)
-        let fallbackUsedBytes = Double(UInt64(stats.internal_page_count) + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)) * pageSize
-        let usedBytes = currentTopMemoryUsedBytes() ?? fallbackUsedBytes
+        let usedPages = max(Int64(stats.active_count) + Int64(stats.wire_count) + Int64(stats.compressor_page_count) - Int64(stats.purgeable_count), 0)
+        let usedBytes = Double(usedPages) * pageSize
         let cachedFilesBytes = Double(UInt64(stats.external_page_count) + UInt64(stats.purgeable_count)) * pageSize
 
         return MemorySnapshot(
@@ -185,24 +179,6 @@ final class SystemMetricsService {
             totalGB: totalBytes / 1_073_741_824,
             cachedFilesGB: cachedFilesBytes / 1_073_741_824
         )
-    }
-
-    private func currentTopMemoryUsedBytes() -> Double? {
-        let output = Shell.run("/usr/bin/top", arguments: ["-l", "1", "-n", "0"])
-        guard
-            let physMemLine = output.split(separator: "\n").first(where: { $0.contains("PhysMem:") }),
-            let range = String(physMemLine).range(of: #"PhysMem:\s*([0-9.]+[KMGTP])\s+used"#, options: .regularExpression)
-        else {
-            return nil
-        }
-
-        let matched = String(String(physMemLine)[range])
-        let token = matched
-            .replacingOccurrences(of: "PhysMem:", with: "")
-            .replacingOccurrences(of: "used", with: "")
-            .trimmingCharacters(in: .whitespaces)
-
-        return Self.byteCount(from: token)
     }
 
     private func currentNetwork() -> (input: Double, output: Double) {
@@ -316,21 +292,6 @@ final class SystemMetricsService {
         var size = MemoryLayout<UInt64>.size
         sysctlbyname(name, &value, &size, nil, 0)
         return value
-    }
-
-    private static func byteCount(from token: String) -> Double? {
-        guard let unit = token.last else { return nil }
-        let numberPart = String(token.dropLast())
-        guard let number = Double(numberPart) else { return nil }
-
-        switch unit.uppercased() {
-        case "K": return number * 1_024
-        case "M": return number * 1_048_576
-        case "G": return number * 1_073_741_824
-        case "T": return number * 1_099_511_627_776
-        case "P": return number * 1_125_899_906_842_624
-        default: return nil
-        }
     }
 
     private func bytesDelta(current: UInt64, previous: UInt64) -> Double {

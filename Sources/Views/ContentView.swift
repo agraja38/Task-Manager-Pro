@@ -352,7 +352,6 @@ struct PerformanceView: View {
                     MetricChartCard(title: "Disk", subtitle: String(format: "R %.1f MB/s  W %.1f MB/s", appState.currentMetrics.diskReadMBps, appState.currentMetrics.diskWriteMBps), history: appState.diskHistory, color: .green, yLabel: "MB/s", height: advancedCardHeight)
                     MetricChartCard(title: "Network", subtitle: String(format: "In %.1f KB/s  Out %.1f KB/s", appState.currentMetrics.networkInKBps, appState.currentMetrics.networkOutKBps), history: appState.networkHistory, color: .cyan, yLabel: "KB/s", height: advancedCardHeight)
                     MetricChartCard(title: "GPU", subtitle: appState.currentMetrics.gpuPercent == nil ? "Unavailable without private APIs" : String(format: "%.1f%%", appState.currentMetrics.gpuPercent ?? 0), history: appState.gpuHistory, color: .purple, yLabel: "%", height: advancedCardHeight)
-                    BatteryCard(height: advancedCardHeight)
                 }
             } else {
                 Grid(horizontalSpacing: 18, verticalSpacing: 18) {
@@ -787,7 +786,7 @@ struct SettingsView: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("• GPU usage in the Performance and Processes views")
-                            Text("• Battery & System telemetry widgets")
+                            Text("• Cached Files monitoring with quick cache clearing")
                             Text("• A dedicated Network tab with interfaces, routing, DNS, and live connections")
                             Text("• Expanded sorting and live telemetry for power-user workflows")
                         }
@@ -911,43 +910,6 @@ struct MetricChartCard: View {
             }
             .padding(.vertical, 8)
         }
-    }
-}
-
-struct BatteryCard: View {
-    @EnvironmentObject private var appState: AppState
-    let height: CGFloat
-
-    var body: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Battery & System").font(.headline)
-                Text(appState.currentMetrics.note)
-                    .foregroundStyle(.secondary)
-                Divider()
-                DetailRow(label: "Battery", value: appState.currentMetrics.batteryPercent.map { String(format: "%.0f%%", $0) } ?? "Unavailable")
-                DetailRow(label: "Charging", value: appState.currentMetrics.isCharging == nil ? "Unknown" : (appState.currentMetrics.isCharging == true ? "Yes" : "No"))
-                DetailRow(label: "Thermal State", value: appState.currentMetrics.thermalLevel)
-                DetailRow(label: "Architecture", value: isRunningTranslated() ? "Running under Rosetta" : "Native \(machineArchitecture())")
-            }
-            .padding(.vertical, 8)
-        }
-        .frame(maxHeight: height)
-    }
-
-    private func machineArchitecture() -> String {
-        #if arch(arm64)
-        return "Apple Silicon"
-        #else
-        return "Intel"
-        #endif
-    }
-
-    private func isRunningTranslated() -> Bool {
-        var translated: Int32 = 0
-        var size = MemoryLayout<Int32>.size
-        let result = sysctlbyname("sysctl.proc_translated", &translated, &size, nil, 0)
-        return result == 0 && translated == 1
     }
 }
 
