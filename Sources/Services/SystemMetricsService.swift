@@ -218,7 +218,7 @@ final class SystemMetricsService {
         guard
             let anonymousBytes = values["Anonymous pages"],
             let wiredBytes = values["Pages wired down"],
-            let compressedBytes = values["Pages stored in compressor"]
+            let compressedBytes = values["Pages occupied by compressor"]
         else {
             return nil
         }

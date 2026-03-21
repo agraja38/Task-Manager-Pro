@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.50"
-BUILD_NUMBER="150"
+VERSION="1.0.51"
+BUILD_NUMBER="151"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.50",
-  "build": 150,
-  "notes": "Fix RAM usage again by reading vm_stat buckets directly and basing memory used on anonymous, wired, and compressed memory instead of cache-inflated page groups.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.50/TaskManagerPro-1.0.50-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.50/TaskManagerPro-1.0.50-intel.dmg"
+  "version": "1.0.51",
+  "build": 151,
+  "notes": "Fix RAM usage by using the physical compressor footprint from vm_stat so compressed memory matches Activity Monitor more closely.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.51/TaskManagerPro-1.0.51-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.51/TaskManagerPro-1.0.51-intel.dmg"
 }
 JSON
 

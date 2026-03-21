@@ -4,9 +4,9 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 
 License: MIT. See [LICENSE](LICENSE).
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.50/TaskManagerPro-1.0.50-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.51/TaskManagerPro-1.0.51-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.50/TaskManagerPro-1.0.50-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.51/TaskManagerPro-1.0.51-intel.dmg)
 
 ## Highlights
 
