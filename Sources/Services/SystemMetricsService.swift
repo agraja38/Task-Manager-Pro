@@ -157,8 +157,7 @@ final class SystemMetricsService {
         guard result == KERN_SUCCESS else { return (0, 0, 0) }
 
         let pageSize = Double(vm_kernel_page_size)
-        let appMemoryPages = max(Int64(stats.internal_page_count) - Int64(stats.purgeable_count), 0)
-        let usedPages = UInt64(appMemoryPages) + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)
+        let usedPages = UInt64(stats.internal_page_count) + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)
         let usedBytes = Double(usedPages) * pageSize
         let totalBytes = Double(Self.sysctlUInt64(name: "hw.memsize"))
 
