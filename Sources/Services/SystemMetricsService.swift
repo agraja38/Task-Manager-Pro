@@ -164,20 +164,71 @@ final class SystemMetricsService {
 
         let totalBytes = Double(Self.sysctlUInt64(name: "hw.memsize"))
         guard totalBytes > 0 else { return MemorySnapshot(percent: 0, usedGB: 0, totalGB: 0, cachedFilesGB: 0) }
-        guard result == KERN_SUCCESS else {
-            return MemorySnapshot(percent: 0, usedGB: 0, totalGB: totalBytes / 1_073_741_824, cachedFilesGB: 0)
+        let pageSize = Double(vm_kernel_page_size)
+
+        let fallbackUsedBytes: Double
+        let fallbackCachedFilesBytes: Double
+        if result == KERN_SUCCESS {
+            fallbackUsedBytes = Double(max(Int64(stats.internal_page_count) + Int64(stats.wire_count), 0)) * pageSize
+            fallbackCachedFilesBytes = Double(UInt64(stats.external_page_count) + UInt64(stats.purgeable_count)) * pageSize
+        } else {
+            fallbackUsedBytes = 0
+            fallbackCachedFilesBytes = 0
         }
 
-        let pageSize = Double(vm_kernel_page_size)
-        let usedPages = max(Int64(stats.active_count) + Int64(stats.wire_count) + Int64(stats.compressor_page_count) - Int64(stats.purgeable_count), 0)
-        let usedBytes = Double(usedPages) * pageSize
-        let cachedFilesBytes = Double(UInt64(stats.external_page_count) + UInt64(stats.purgeable_count)) * pageSize
+        let vmStatSummary = currentVMStatSummary()
+        let usedBytes = vmStatSummary.map { summary in
+            max(summary.anonymousBytes + summary.wiredBytes + summary.compressedBytes, 0)
+        } ?? fallbackUsedBytes
+        let cachedFilesBytes = vmStatSummary?.cachedFilesBytes ?? fallbackCachedFilesBytes
 
         return MemorySnapshot(
             percent: (usedBytes / totalBytes) * 100,
             usedGB: usedBytes / 1_073_741_824,
             totalGB: totalBytes / 1_073_741_824,
             cachedFilesGB: cachedFilesBytes / 1_073_741_824
+        )
+    }
+
+    private func currentVMStatSummary() -> VMStatSummary? {
+        let output = Shell.run("/usr/bin/vm_stat")
+        let lines = output.split(separator: "\n")
+        guard
+            let header = lines.first,
+            let pageSizeMatch = String(header).range(of: #"page size of ([0-9]+) bytes"#, options: .regularExpression)
+        else {
+            return nil
+        }
+
+        let pageSizeText = String(String(header)[pageSizeMatch]).replacingOccurrences(of: #"[^0-9]"#, with: "", options: .regularExpression)
+        guard let pageSize = Double(pageSizeText), pageSize > 0 else {
+            return nil
+        }
+
+        var values: [String: Double] = [:]
+        for line in lines.dropFirst() {
+            let parts = line.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else { continue }
+            let key = parts[0]
+            let rawValue = parts[1].replacingOccurrences(of: ".", with: "").trimmingCharacters(in: .whitespaces)
+            guard let pages = Double(rawValue) else { continue }
+            values[key] = pages * pageSize
+        }
+
+        guard
+            let anonymousBytes = values["Anonymous pages"],
+            let wiredBytes = values["Pages wired down"],
+            let compressedBytes = values["Pages stored in compressor"]
+        else {
+            return nil
+        }
+
+        let cachedFilesBytes = (values["File-backed pages"] ?? 0) + (values["Pages purgeable"] ?? 0)
+        return VMStatSummary(
+            anonymousBytes: anonymousBytes,
+            wiredBytes: wiredBytes,
+            compressedBytes: compressedBytes,
+            cachedFilesBytes: cachedFilesBytes
         )
     }
 
@@ -518,4 +569,11 @@ private struct RawNetworkInterface {
     let mtu: Int
     let macAddress: String?
     let addresses: [String]
+}
+
+private struct VMStatSummary {
+    let anonymousBytes: Double
+    let wiredBytes: Double
+    let compressedBytes: Double
+    let cachedFilesBytes: Double
 }
