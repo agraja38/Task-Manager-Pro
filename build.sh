@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.45"
-BUILD_NUMBER="145"
+VERSION="1.0.46"
+BUILD_NUMBER="146"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.45",
-  "build": 145,
-  "notes": "Replace repeated osascript memory cleanup prompts with a reusable privileged execution path and keep Clear Memory available from the menu bar.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.45/TaskManagerPro-1.0.45-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.45/TaskManagerPro-1.0.45-intel.dmg"
+  "version": "1.0.46",
+  "build": 146,
+  "notes": "Align RAM usage with Activity Monitor by using macOS memory-used accounting instead of counting inactive pages as used memory.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.46/TaskManagerPro-1.0.46-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.46/TaskManagerPro-1.0.46-intel.dmg"
 }
 JSON
 
