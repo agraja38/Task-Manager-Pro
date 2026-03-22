@@ -592,6 +592,10 @@ struct ThermalsView: View {
         Array(repeating: GridItem(.flexible(), spacing: 14), count: 4)
     }
 
+    private var sensorColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 250, maximum: 360), spacing: 12, alignment: .top)]
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -610,8 +614,6 @@ struct ThermalsView: View {
                         DetailRow(label: "Thermal State", value: appState.currentThermalDetails.thermalLevel)
                         DetailRow(label: "Sensor Source", value: appState.currentThermalDetails.hottestSensors.isEmpty && appState.currentThermalDetails.fanSpeedsRPM.isEmpty ? "Unavailable" : "AppleSMC")
                         DetailRow(label: "Last Sample", value: appState.currentThermalDetails.capturedAt == .distantPast ? "Not sampled yet" : DateFormatter.localizedString(from: appState.currentThermalDetails.capturedAt, dateStyle: .none, timeStyle: .medium))
-                        Text(appState.currentThermalDetails.note)
-                            .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 8)
                 }
@@ -623,26 +625,27 @@ struct ThermalsView: View {
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
-                            ForEach(appState.currentThermalDetails.hottestSensors) { sensor in
-                                HStack(spacing: 10) {
-                                    Text(sensor.name)
-                                        .font(.headline)
-                                        .lineLimit(1)
-                                    Text("(\(sensor.key))")
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Text(String(format: "%.1f C", sensor.valueC))
-                                        .font(.headline.monospacedDigit())
-                                        .foregroundStyle(.red)
+                            LazyVGrid(columns: sensorColumns, spacing: 12) {
+                                ForEach(appState.currentThermalDetails.hottestSensors) { sensor in
+                                    HStack(spacing: 10) {
+                                        Text(sensor.name)
+                                            .font(.subheadline.weight(.semibold))
+                                            .lineLimit(2)
+                                            .multilineTextAlignment(.leading)
+                                        Spacer(minLength: 8)
+                                        Text(String(format: "%.1f C", sensor.valueC))
+                                            .font(.subheadline.monospacedDigit().weight(.bold))
+                                            .foregroundStyle(.red)
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 10)
+                                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+                                    )
                                 }
-                                .padding(12)
-                                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
-                                )
                             }
                         }
                     }

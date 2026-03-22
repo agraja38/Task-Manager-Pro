@@ -211,7 +211,7 @@ final class SMCReader {
         if sensors.isEmpty && fans.isEmpty {
             note = "This Mac did not expose readable SMC thermal sensors right now."
         } else {
-            note = "Thermals are being read directly from AppleSMC, the same style of sensor path used by dedicated fan and thermal utilities."
+            note = ""
         }
 
         return ThermalDetailsSnapshot(
@@ -470,36 +470,57 @@ final class SMCReader {
             return mapped
         }
 
-        if key.hasPrefix("TPD"), let label = indexedLabel(key, prefix: "TPD", base: "Performance Core") {
+        if key.hasPrefix("TPD"), let label = indexedCoreLabel(key, prefix: "TPD", base: "CPU Performance Core") {
             return label
         }
-        if key.hasPrefix("TRD"), let label = indexedLabel(key, prefix: "TRD", base: "Efficiency Core") {
+        if key.hasPrefix("TRD"), let label = indexedCoreLabel(key, prefix: "TRD", base: "CPU Efficiency Core") {
             return label
         }
-        if key.hasPrefix("TUD"), let label = indexedLabel(key, prefix: "TUD", base: "Unified Core") {
+        if key.hasPrefix("TUD"), let label = indexedCoreLabel(key, prefix: "TUD", base: "CPU Unified Core") {
+            return label
+        }
+        if key.hasPrefix("TPC"), let label = indexedCoreLabel(key, prefix: "TPC", base: "CPU Core") {
+            return label
+        }
+        if key.hasPrefix("TGC"), let label = indexedCoreLabel(key, prefix: "TGC", base: "GPU Cluster") {
+            return label
+        }
+        if key.hasPrefix("TG"), let label = indexedClusterLabel(key, prefix: "TG", base: "GPU Cluster") {
             return label
         }
         if key.hasPrefix("TD"), let label = indexedLabel(key, prefix: "TD", base: "CPU Die Sensor") {
             return label
         }
+        if key.hasPrefix("TB"), let label = indexedLabel(key, prefix: "TB", base: "Battery") {
+            return label
+        }
+        if key.hasPrefix("TW"), let label = indexedLabel(key, prefix: "TW", base: "Airport Proximity") {
+            return label
+        }
+        if key.hasPrefix("TH"), let label = indexedLabel(key, prefix: "TH", base: "Thunderbolt") {
+            return label
+        }
+        if key.hasPrefix("TM"), let label = indexedLabel(key, prefix: "TM", base: "Power Manager") {
+            return label
+        }
 
         switch key.prefix(2) {
         case "TV":
-            return "Voltage Regulator \(key.dropFirst(2))"
+            return "Power Supply \(key.dropFirst(2))"
         case "TG", "Tg":
-            return "GPU Sensor \(key.dropFirst(2))"
+            return "GPU Cluster \(key.dropFirst(2))"
         case "TC":
-            return "CPU Sensor \(key.dropFirst(2))"
+            return "CPU Core Average"
         case "Te":
-            return "Efficiency Sensor \(key.dropFirst(2))"
+            return "CPU Efficiency \(key.dropFirst(2))"
         case "Tp":
-            return "Performance Sensor \(key.dropFirst(2))"
+            return "CPU Performance \(key.dropFirst(2))"
         case "Ta":
-            return "Surface Sensor \(key.dropFirst(2))"
+            return "Trackpad \(key.dropFirst(2))"
         case "TS":
-            return "Palm Rest Sensor \(key.dropFirst(2))"
+            return "Palm Rest \(key.dropFirst(2))"
         case "TB":
-            return "Enclosure Sensor \(key.dropFirst(2))"
+            return "Battery \(key.dropFirst(2))"
         default:
             return key
         }
@@ -513,11 +534,31 @@ final class SMCReader {
         return "\(base) \(suffix.uppercased())"
     }
 
+    private func indexedCoreLabel(_ key: String, prefix: String, base: String) -> String? {
+        let suffix = String(key.dropFirst(prefix.count))
+        guard !suffix.isEmpty else { return nil }
+        if let number = Int(suffix, radix: 16) {
+            return "\(base) \(number + 1)"
+        }
+        return "\(base) \(suffix.uppercased())"
+    }
+
+    private func indexedClusterLabel(_ key: String, prefix: String, base: String) -> String? {
+        let suffix = String(key.dropFirst(prefix.count))
+        guard !suffix.isEmpty else { return nil }
+        if let number = Int(suffix.prefix(1), radix: 16) {
+            return "\(base) \(number + 1)"
+        }
+        return "\(base) \(suffix.uppercased())"
+    }
+
     private var explicitSensorNames: [String: String] {
         [
             "TCMz": "CPU Thermal Zone",
+            "TCMA": "CPU Core Average",
             "TCMb": "CPU Memory Buffer",
             "TCHP": "CPU Performance Cluster",
+            "TC0C": "CPU Core Average",
             "TC0P": "CPU Proximity",
             "TC0F": "CPU Die",
             "TC0D": "CPU Diode",
@@ -540,11 +581,14 @@ final class SMCReader {
             "Tg0L": "GPU Logic",
             "Tg04": "GPU Rail",
             "Tg0R": "GPU Regulator",
+            "Tg0A": "GPU Cluster Average",
             "TG0P": "GPU Proximity",
             "TG0D": "GPU Diode",
             "TG0H": "GPU Heatsink",
             "TS0P": "Palm Rest",
             "TaLP": "Left Palm Rest",
+            "TaPT": "Trackpad",
+            "TaPA": "Trackpad Actuator",
             "TaRF": "Right Front Edge",
             "TaTP": "Top Case",
             "TaLT": "Left Trackpad Edge",
@@ -552,8 +596,11 @@ final class SMCReader {
             "TaLW": "Left Wrist Rest",
             "TaRW": "Right Wrist Rest",
             "TB0T": "Base Enclosure",
-            "TB1T": "Base Enclosure Rear",
-            "TB2T": "Base Enclosure Mid",
+            "TB1T": "Battery",
+            "TB2T": "Battery Gas Gauge",
+            "TH0P": "Thunderbolt Left Proximity",
+            "TH1P": "Thunderbolt Right Proximity",
+            "TM0P": "Power Manager Die Average",
             "TVh0": "Voltage Regulator Hotspot 0",
             "TVh1": "Voltage Regulator Hotspot 1",
             "TVm0": "Voltage Regulator Module 0",

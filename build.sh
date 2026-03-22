@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.58"
-BUILD_NUMBER="158"
+VERSION="1.0.59"
+BUILD_NUMBER="159"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.58",
-  "build": 158,
-  "notes": "Remove the manual fan control feature while keeping thermals monitoring and fan speed readouts intact.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.58/TaskManagerPro-1.0.58-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.58/TaskManagerPro-1.0.58-intel.dmg"
+  "version": "1.0.59",
+  "build": 159,
+  "notes": "Refine the Thermals tab with cleaner naming, a denser multi-column sensor layout, and no AppleSMC note banner.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.59/TaskManagerPro-1.0.59-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.59/TaskManagerPro-1.0.59-intel.dmg"
 }
 JSON
 
