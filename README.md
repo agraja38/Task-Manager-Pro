@@ -36,24 +36,26 @@ It gives you a modern Mac-native dashboard for processes, performance, thermals,
 - Power users who want deeper diagnostics without juggling multiple tools
 - Developers, creators, and professionals who want live visibility into system load
 
-## Advanced Mode
+## Modes
 
-Advanced mode unlocks the deeper monitoring views while keeping the default experience focused and simple.
+### Basic Mode
 
-It adds:
+Basic Mode keeps the app simple, clean, and focused on what most people want every day:
 
-- GPU visibility in more parts of the app
-- Full Network monitoring
-- Full Thermals monitoring
-- Expanded live telemetry for troubleshooting and performance analysis
+- Processes with live CPU and memory usage
+- Safe app controls like `Quit`, `Terminate`, and `Force Quit`
+- Performance charts for CPU, RAM, disk, and network
+- A lighter dashboard that is easier to scan quickly
+- Menu bar monitoring and appearance controls
 
-## macOS-Friendly Design
+### Advanced Mode
 
-- Native macOS look and feel
-- Efficient background sampling
-- Safe process controls with protection against obviously critical system processes
-- Public APIs first, with best-effort fallbacks where macOS restricts deeper access
-- Direct AppleSMC thermal reads on supported Macs for detailed temperature and fan monitoring
+Advanced Mode is built for power users who want deeper insight into how their Mac is behaving:
+
+- GPU visibility in more areas of the app
+- Full Network monitoring with interfaces, DNS, routing, and active connections
+- Full Thermals monitoring with CPU temp, GPU temp, palm-rest temp, fan RPM, and sensor readings
+- Expanded telemetry for troubleshooting, diagnostics, and performance analysis
 
 ## Download
 
