@@ -189,8 +189,8 @@ struct ThermalDetailsSnapshot: Hashable {
         fanSpeedsRPM: [],
         hottestSensors: [],
         thermalLevel: "Unknown",
-        note: "Detailed temperatures and fan speeds become available after macOS grants privileged telemetry access.",
-        requiresPrivilege: true,
+        note: "Detailed temperatures and fan speeds appear here when Task Manager Pro can read AppleSMC directly on this Mac.",
+        requiresPrivilege: false,
         capturedAt: .distantPast
     )
 }

@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.52"
-BUILD_NUMBER="152"
+VERSION="1.0.53"
+BUILD_NUMBER="153"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.52",
-  "build": 152,
-  "notes": "Add an advanced-only Thermals tab with thermal state, temperatures, and fan speeds using privileged telemetry when macOS grants access.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.52/TaskManagerPro-1.0.52-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.52/TaskManagerPro-1.0.52-intel.dmg"
+  "version": "1.0.53",
+  "build": 153,
+  "notes": "Replace the Thermals tab backend with direct AppleSMC sensor reads, matching the monitoring architecture used by dedicated fan and thermal utilities.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.53/TaskManagerPro-1.0.53-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.53/TaskManagerPro-1.0.53-intel.dmg"
 }
 JSON
 

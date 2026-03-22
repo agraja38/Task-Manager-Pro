@@ -4,16 +4,16 @@ Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and App
 
 License: MIT. See [LICENSE](LICENSE).
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.52/TaskManagerPro-1.0.52-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.53/TaskManagerPro-1.0.53-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.52/TaskManagerPro-1.0.52-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.53/TaskManagerPro-1.0.53-intel.dmg)
 
 ## Highlights
 
 - Processes view with app icons, app names, live CPU/memory, and quick actions
 - Processes header badges for CPU, memory, GPU, and network at a glance
 - Safe `Quit`, `Terminate`, and `Force Quit` actions with warnings for critical macOS processes
-- Performance dashboard with live CPU, memory, disk, network, GPU fallback, battery, and thermal-state cards
+- Performance dashboard with live CPU, memory, disk, network, GPU fallback, and thermal-state cards
 - Right-click the CPU widget to switch between overall CPU activity and a per-core grid of mini CPU graphs
 - Normal mode keeps the dashboard focused on CPU, memory, disk, and network, while advanced telemetry mode shows the extra GPU and Battery & System widgets
 - Search, sort, filter, dark mode, and resource-heavy highlighting
@@ -25,7 +25,8 @@ License: MIT. See [LICENSE](LICENSE).
 ## macOS Notes
 
 - Task Manager Pro uses public APIs first and falls back to safe alternatives when macOS restricts direct low-level telemetry.
-- GPU usage and exact temperature readings are limited on macOS without private APIs or elevated tools.
+- Advanced-mode thermal readings are pulled directly from AppleSMC on supported Macs, which is the same monitoring path used by dedicated fan and thermal utilities.
+- GPU usage still depends on best-effort macOS graphics telemetry and can vary by hardware generation.
 - Some process terminations may still be denied by macOS if the current user does not own the target process or the process is protected.
 
 ## Advanced Mode
@@ -35,8 +36,8 @@ Advanced mode unlocks a deeper monitoring layout for power users while keeping t
 It adds:
 
 - GPU usage in the Performance and Processes views
-- Battery & System telemetry widgets
 - A dedicated Network tab with interfaces, routing, DNS, and active connection details
+- A dedicated Thermals tab with CPU temperature, GPU temperature, hottest sensors, and live fan RPM
 - Expanded live telemetry and extra monitoring surfaces for deeper diagnostics
 
 ## Updating

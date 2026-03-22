@@ -594,7 +594,7 @@ struct ThermalsView: View {
                 GroupBox("Overview") {
                     VStack(alignment: .leading, spacing: 12) {
                         DetailRow(label: "Thermal State", value: appState.currentThermalDetails.thermalLevel)
-                        DetailRow(label: "Detailed Access", value: appState.currentThermalDetails.requiresPrivilege ? "Needs privileged telemetry" : "Available")
+                        DetailRow(label: "Sensor Source", value: appState.currentThermalDetails.hottestSensors.isEmpty && appState.currentThermalDetails.fanSpeedsRPM.isEmpty ? "Unavailable" : "AppleSMC")
                         DetailRow(label: "Last Sample", value: appState.currentThermalDetails.capturedAt == .distantPast ? "Not sampled yet" : DateFormatter.localizedString(from: appState.currentThermalDetails.capturedAt, dateStyle: .none, timeStyle: .medium))
                         Text(appState.currentThermalDetails.note)
                             .foregroundStyle(.secondary)
@@ -605,7 +605,7 @@ struct ThermalsView: View {
                 GroupBox("Temperatures") {
                     VStack(spacing: 10) {
                         if appState.currentThermalDetails.hottestSensors.isEmpty {
-                            Text("Open this tab to let Task Manager Pro request detailed thermal telemetry once. After access is granted, this view shows the hottest sensors macOS exposes.")
+                            Text("Task Manager Pro could not find readable AppleSMC temperature sensors on this Mac right now.")
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
@@ -633,7 +633,7 @@ struct ThermalsView: View {
                 GroupBox("Fans") {
                     VStack(spacing: 10) {
                         if appState.currentThermalDetails.fanSpeedsRPM.isEmpty {
-                            Text("Fan speed data is unavailable until privileged thermal telemetry is granted, or this Mac does not expose fan RPM data through powermetrics.")
+                            Text("Fan speed data is unavailable right now, or this Mac does not expose fan RPM through AppleSMC.")
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
