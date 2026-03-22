@@ -219,7 +219,7 @@ final class SMCReader {
             gpuTemperatureC: gpuTemperature,
             palmRestTemperatureC: palmRestTemperature,
             fanSpeedsRPM: fans,
-            hottestSensors: Array(orderedSensors(sensors).prefix(12)),
+            hottestSensors: curatedSensors(from: sensors),
             thermalLevel: currentThermalLevel,
             note: note,
             requiresPrivilege: false,
@@ -432,13 +432,54 @@ final class SMCReader {
             .max()
     }
 
-    private func orderedSensors(_ sensors: [ThermalSensorSnapshot]) -> [ThermalSensorSnapshot] {
-        sensors.sorted { lhs, rhs in
-            let lhsRank = sensorSortRank(lhs)
-            let rhsRank = sensorSortRank(rhs)
-            if lhsRank != rhsRank {
-                return lhsRank < rhsRank
+    private func curatedSensors(from sensors: [ThermalSensorSnapshot]) -> [ThermalSensorSnapshot] {
+        let exactByKey = Dictionary(uniqueKeysWithValues: sensors.map { ($0.key, $0) })
+        var remainingByKey = exactByKey
+        var curated: [ThermalSensorSnapshot] = []
+
+        func appendExact(_ candidates: [String], as name: String) {
+            for key in candidates {
+                if let sensor = remainingByKey.removeValue(forKey: key) {
+                    curated.append(ThermalSensorSnapshot(key: sensor.key, name: name, valueC: sensor.valueC))
+                    return
+                }
             }
+        }
+
+        func appendSeries(prefix: String, namePrefix: String) {
+            let matches = remainingByKey.values
+                .filter { $0.key.hasPrefix(prefix) }
+                .sorted { lhs, rhs in
+                    numericSuffix(for: lhs.key, after: prefix) < numericSuffix(for: rhs.key, after: prefix)
+                }
+
+            for (index, sensor) in matches.enumerated() {
+                remainingByKey.removeValue(forKey: sensor.key)
+                curated.append(ThermalSensorSnapshot(key: sensor.key, name: "\(namePrefix) \(index + 1)", valueC: sensor.valueC))
+            }
+        }
+
+        appendExact(["TW0P", "TW1P", "TW0T"], as: "Airport Proximity")
+        appendExact(["TB1T", "TBAT"], as: "Battery")
+        appendExact(["TB2T", "TB0T"], as: "Battery Gas Gauge")
+        appendExact(["TCMA", "TC0C", "TC0F"], as: "CPU Core Average")
+        appendSeries(prefix: "TRD", namePrefix: "CPU Efficiency Core")
+        appendSeries(prefix: "TPD", namePrefix: "CPU Performance Core")
+        appendSeries(prefix: "TGC", namePrefix: "GPU Cluster")
+        appendExact(["Tg0A", "TG0A", "TGAA"], as: "GPU Cluster Average")
+        appendExact(["TM0P"], as: "Power Manager Die Average")
+        appendExact(["TV0P", "Tp0P", "TVP0", "TVh0"], as: "Power Supply Proximity")
+        appendExact(["TH0P"], as: "Thunderbolt Left Proximity")
+        appendExact(["TH1P"], as: "Thunderbolt Right Proximity")
+        appendExact(["TaPT", "Ta0P"], as: "Trackpad")
+        appendExact(["TaPA", "Ta0A"], as: "Trackpad Actuator")
+        appendExact(["TH0T", "TH1T", "Ts0S"], as: "APPLE SSD AP1024Z")
+
+        if !curated.isEmpty {
+            return curated
+        }
+
+        return sensors.sorted { lhs, rhs in
             if lhs.name != rhs.name {
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
@@ -446,23 +487,12 @@ final class SMCReader {
         }
     }
 
-    private func sensorSortRank(_ sensor: ThermalSensorSnapshot) -> Int {
-        if Self.cpuPriorityKeys.contains(sensor.key) || sensor.key.hasPrefix("TC") || sensor.key.hasPrefix("Te") || sensor.key.hasPrefix("Tp") || sensor.key.hasPrefix("Tf") {
-            return 0
+    private func numericSuffix(for key: String, after prefix: String) -> Int {
+        let suffix = String(key.dropFirst(prefix.count))
+        if let value = Int(suffix, radix: 16) {
+            return value
         }
-        if Self.gpuPriorityKeys.contains(sensor.key) || sensor.key.hasPrefix("TG") || sensor.key.hasPrefix("Tg") {
-            return 1
-        }
-        if Self.palmRestPriorityKeys.contains(sensor.key) || sensor.key.hasPrefix("TS") || sensor.key.hasPrefix("Ta") {
-            return 2
-        }
-        if sensor.key.hasPrefix("TV") {
-            return 3
-        }
-        if sensor.key.hasPrefix("TB") {
-            return 4
-        }
-        return 5
+        return Int.max
     }
 
     private func displayName(for key: String) -> String {

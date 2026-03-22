@@ -4,9 +4,9 @@ Task Manager Pro is a polished macOS system monitor built for people who want a 
 
 It gives you a modern Mac-native dashboard for processes, performance, thermals, and network activity, with a fast UI, safe app controls, menu bar monitoring, and built-in updating.
 
-[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.59/TaskManagerPro-1.0.59-apple-silicon.dmg)
+[Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.60/TaskManagerPro-1.0.60-apple-silicon.dmg)
 
-[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.59/TaskManagerPro-1.0.59-intel.dmg)
+[Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.60/TaskManagerPro-1.0.60-intel.dmg)
 
 ## Why Task Manager Pro
 
@@ -61,8 +61,8 @@ Advanced Mode is built for power users who want deeper insight into how their Ma
 
 Task Manager Pro is available as drag-and-drop DMG installers:
 
-- [Apple Silicon DMG](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.59/TaskManagerPro-1.0.59-apple-silicon.dmg)
-- [Intel DMG](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.59/TaskManagerPro-1.0.59-intel.dmg)
+- [Apple Silicon DMG](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.60/TaskManagerPro-1.0.60-apple-silicon.dmg)
+- [Intel DMG](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.60/TaskManagerPro-1.0.60-intel.dmg)
 
 ## For Developers
 
