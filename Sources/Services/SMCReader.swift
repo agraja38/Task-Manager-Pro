@@ -159,6 +159,9 @@ final class SMCReader {
         "Tg0Y", "Tg05", "Tg0S", "Tg0d", "Tg0X", "Tg0K", "Tg0L", "Tg04", "Tg0R",
         "TG0P", "TG0D", "TG0H"
     ]
+    private static let palmRestPriorityKeys = [
+        "TS0P", "TaLP", "TaRF", "TaTP", "TaLT", "TaRT", "TaLW", "TaRW"
+    ]
 
     private let lock = NSLock()
     private var connection: io_connect_t = 0
@@ -184,6 +187,7 @@ final class SMCReader {
                 return ThermalDetailsSnapshot(
                     cpuTemperatureC: nil,
                     gpuTemperatureC: nil,
+                    palmRestTemperatureC: nil,
                     fanSpeedsRPM: [],
                     hottestSensors: [],
                     thermalLevel: currentThermalLevel,
@@ -201,6 +205,7 @@ final class SMCReader {
         let fans = try readFans()
         let cpuTemperature = preferredTemperature(in: sensors, priority: Self.cpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TC", "Tp", "Te", "Tf"])
         let gpuTemperature = preferredTemperature(in: sensors, priority: Self.gpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TG", "Tg"])
+        let palmRestTemperature = preferredTemperature(in: sensors, priority: Self.palmRestPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TS", "Ta"])
 
         let note: String
         if sensors.isEmpty && fans.isEmpty {
@@ -212,6 +217,7 @@ final class SMCReader {
         return ThermalDetailsSnapshot(
             cpuTemperatureC: cpuTemperature,
             gpuTemperatureC: gpuTemperature,
+            palmRestTemperatureC: palmRestTemperature,
             fanSpeedsRPM: fans,
             hottestSensors: Array(sensors.sorted { $0.valueC > $1.valueC }.prefix(12)),
             thermalLevel: currentThermalLevel,
@@ -336,7 +342,8 @@ final class SMCReader {
             guard let value = try? decodeNumericValue(for: key), value > 0, value < 130 else {
                 return nil
             }
-            return ThermalSensorSnapshot(name: key.code.toString(), valueC: value)
+            let rawKey = key.code.toString()
+            return ThermalSensorSnapshot(key: rawKey, name: displayName(for: rawKey), valueC: value)
         }
     }
 
@@ -404,14 +411,121 @@ final class SMCReader {
     }
 
     private func preferredTemperature(in sensors: [ThermalSensorSnapshot], priority: [String]) -> Double? {
-        let candidates = sensors.filter { priority.contains($0.name) && $0.valueC >= 10 }
+        let candidates = sensors.filter { priority.contains($0.key) && $0.valueC >= 10 }
         return candidates.map(\.valueC).max()
     }
 
     private func hottestMatchingTemperature(in sensors: [ThermalSensorSnapshot], prefixes: [String]) -> Double? {
         sensors
-            .filter { sensor in prefixes.contains { sensor.name.hasPrefix($0) } }
+            .filter { sensor in prefixes.contains { sensor.key.hasPrefix($0) } }
             .map(\.valueC)
             .max()
+    }
+
+    private func displayName(for key: String) -> String {
+        if let mapped = explicitSensorNames[key] {
+            return mapped
+        }
+
+        if key.hasPrefix("TPD"), let label = indexedLabel(key, prefix: "TPD", base: "Performance Core") {
+            return label
+        }
+        if key.hasPrefix("TRD"), let label = indexedLabel(key, prefix: "TRD", base: "Efficiency Core") {
+            return label
+        }
+        if key.hasPrefix("TUD"), let label = indexedLabel(key, prefix: "TUD", base: "Unified Core") {
+            return label
+        }
+        if key.hasPrefix("TD"), let label = indexedLabel(key, prefix: "TD", base: "CPU Die Sensor") {
+            return label
+        }
+
+        switch key.prefix(2) {
+        case "TV":
+            return "Voltage Regulator \(key.dropFirst(2))"
+        case "TG", "Tg":
+            return "GPU Sensor \(key.dropFirst(2))"
+        case "TC":
+            return "CPU Sensor \(key.dropFirst(2))"
+        case "Te":
+            return "Efficiency Sensor \(key.dropFirst(2))"
+        case "Tp":
+            return "Performance Sensor \(key.dropFirst(2))"
+        case "Ta":
+            return "Surface Sensor \(key.dropFirst(2))"
+        case "TS":
+            return "Palm Rest Sensor \(key.dropFirst(2))"
+        case "TB":
+            return "Enclosure Sensor \(key.dropFirst(2))"
+        default:
+            return key
+        }
+    }
+
+    private func indexedLabel(_ key: String, prefix: String, base: String) -> String? {
+        let suffix = String(key.dropFirst(prefix.count))
+        if suffix.isEmpty {
+            return nil
+        }
+        return "\(base) \(suffix.uppercased())"
+    }
+
+    private var explicitSensorNames: [String: String] {
+        [
+            "TCMz": "CPU Thermal Zone",
+            "TCMb": "CPU Memory Buffer",
+            "TCHP": "CPU Performance Cluster",
+            "TC0P": "CPU Proximity",
+            "TC0F": "CPU Die",
+            "TC0D": "CPU Diode",
+            "TC0H": "CPU Heatsink",
+            "Te05": "Efficiency Cluster",
+            "Te06": "Efficiency Cluster Peak",
+            "Te0S": "Efficiency Cluster Sensor",
+            "Te0T": "Efficiency Cluster Thermal",
+            "TfC0": "CPU Core Group 0",
+            "TfC1": "CPU Core Group 1",
+            "TfC2": "CPU Core Group 2",
+            "TfC3": "CPU Core Group 3",
+            "TfC4": "CPU Core Group 4",
+            "Tg05": "GPU Cluster",
+            "Tg0S": "GPU Shader Cluster",
+            "Tg0Y": "GPU Cluster Peak",
+            "Tg0d": "GPU Die",
+            "Tg0X": "GPU Max",
+            "Tg0K": "GPU Core",
+            "Tg0L": "GPU Logic",
+            "Tg04": "GPU Rail",
+            "Tg0R": "GPU Regulator",
+            "TG0P": "GPU Proximity",
+            "TG0D": "GPU Diode",
+            "TG0H": "GPU Heatsink",
+            "TS0P": "Palm Rest",
+            "TaLP": "Left Palm Rest",
+            "TaRF": "Right Front Edge",
+            "TaTP": "Top Case",
+            "TaLT": "Left Trackpad Edge",
+            "TaRT": "Right Trackpad Edge",
+            "TaLW": "Left Wrist Rest",
+            "TaRW": "Right Wrist Rest",
+            "TB0T": "Base Enclosure",
+            "TB1T": "Base Enclosure Rear",
+            "TB2T": "Base Enclosure Mid",
+            "TVh0": "Voltage Regulator Hotspot 0",
+            "TVh1": "Voltage Regulator Hotspot 1",
+            "TVm0": "Voltage Regulator Module 0",
+            "TVMR": "Memory Voltage Regulator",
+            "TVMD": "Voltage Regulator Driver",
+            "TVMX": "Voltage Regulator Peak",
+            "TVMr": "Voltage Regulator Rail",
+            "TVS0": "System Voltage Rail 0",
+            "TVS1": "System Voltage Rail 1",
+            "TVS2": "System Voltage Rail 2",
+            "TVV0": "Video Voltage Rail",
+            "TVXX": "Voltage Regulator Global Peak",
+            "TVXh": "Voltage Regulator Hotspot Peak",
+            "TVxx": "Voltage Regulator Max",
+            "TVms": "Voltage Regulator Memory Sensor"
+        ]
     }
 }

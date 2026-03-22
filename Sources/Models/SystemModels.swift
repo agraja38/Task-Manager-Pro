@@ -176,6 +176,7 @@ struct NetworkConnectionSnapshot: Identifiable, Hashable {
 struct ThermalDetailsSnapshot: Hashable {
     let cpuTemperatureC: Double?
     let gpuTemperatureC: Double?
+    let palmRestTemperatureC: Double?
     let fanSpeedsRPM: [FanSpeedSnapshot]
     let hottestSensors: [ThermalSensorSnapshot]
     let thermalLevel: String
@@ -186,6 +187,7 @@ struct ThermalDetailsSnapshot: Hashable {
     static let empty = ThermalDetailsSnapshot(
         cpuTemperatureC: nil,
         gpuTemperatureC: nil,
+        palmRestTemperatureC: nil,
         fanSpeedsRPM: [],
         hottestSensors: [],
         thermalLevel: "Unknown",
@@ -196,7 +198,8 @@ struct ThermalDetailsSnapshot: Hashable {
 }
 
 struct ThermalSensorSnapshot: Identifiable, Hashable {
-    var id: String { name }
+    var id: String { key }
+    let key: String
     let name: String
     let valueC: Double
 }

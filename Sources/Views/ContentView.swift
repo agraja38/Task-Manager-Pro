@@ -578,6 +578,15 @@ struct NetworkView: View {
 
 struct ThermalsView: View {
     @EnvironmentObject private var appState: AppState
+    @State private var spinsFan = false
+
+    private var combinedFanRPM: Int {
+        appState.currentThermalDetails.fanSpeedsRPM.reduce(0) { $0 + $1.rpm }
+    }
+
+    private var fanIsRunning: Bool {
+        combinedFanRPM > 0
+    }
 
     var body: some View {
         ScrollView {
@@ -585,10 +594,11 @@ struct ThermalsView: View {
                 Text("Thermals")
                     .font(.system(size: 28, weight: .bold))
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                     MetricBadge(title: "CPU Temp", value: temperatureString(appState.currentThermalDetails.cpuTemperatureC), color: .red, prominence: .large)
                     MetricBadge(title: "GPU Temp", value: temperatureString(appState.currentThermalDetails.gpuTemperatureC), color: .orange, prominence: .large)
-                    MetricBadge(title: "Thermal State", value: appState.currentThermalDetails.thermalLevel, color: .pink, prominence: .large)
+                    fanMetricCard
+                    MetricBadge(title: "Palm Rest", value: temperatureString(appState.currentThermalDetails.palmRestTemperatureC), color: .pink, prominence: .large)
                 }
 
                 GroupBox("Overview") {
@@ -610,13 +620,18 @@ struct ThermalsView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             ForEach(appState.currentThermalDetails.hottestSensors) { sensor in
-                                HStack {
-                                    Text(sensor.name)
-                                        .font(.headline)
-                                    Spacer()
-                                    Text(String(format: "%.1f C", sensor.valueC))
-                                        .font(.headline.monospacedDigit())
-                                        .foregroundStyle(.red)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text(sensor.name)
+                                            .font(.headline)
+                                        Spacer()
+                                        Text(String(format: "%.1f C", sensor.valueC))
+                                            .font(.headline.monospacedDigit())
+                                            .foregroundStyle(.red)
+                                    }
+                                    Text(sensor.key)
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(.secondary)
                                 }
                                 .padding(12)
                                 .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -659,11 +674,77 @@ struct ThermalsView: View {
             }
             .padding(20)
         }
+        .onAppear {
+            updateFanAnimationState()
+        }
+        .onChange(of: combinedFanRPM) { _ in
+            updateFanAnimationState()
+        }
     }
 
     private func temperatureString(_ value: Double?) -> String {
         guard let value else { return "--" }
         return String(format: "%.1f C", value)
+    }
+
+    @ViewBuilder
+    private var fanMetricCard: some View {
+        GroupBox {
+            HStack(spacing: 14) {
+                Image(systemName: "fan.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(fanIsRunning ? Color.cyan : Color.secondary)
+                    .rotationEffect(.degrees(spinsFan ? 360 : 0))
+                    .animation(
+                        fanIsRunning
+                        ? .linear(duration: fanAnimationDuration).repeatForever(autoreverses: false)
+                        : .easeOut(duration: 0.25),
+                        value: spinsFan
+                    )
+                    .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Fan Speed")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(fanSpeedValue)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Text(fanSpeedSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(12)
+        }
+    }
+
+    private var fanSpeedValue: String {
+        if appState.currentThermalDetails.fanSpeedsRPM.isEmpty {
+            return "--"
+        }
+        return "\(combinedFanRPM) rpm"
+    }
+
+    private var fanSpeedSubtitle: String {
+        let fanCount = appState.currentThermalDetails.fanSpeedsRPM.count
+        guard fanCount > 0 else { return "No fan telemetry" }
+        return fanCount == 1 ? "1 fan active" : "\(fanCount) fans active"
+    }
+
+    private var fanAnimationDuration: Double {
+        let normalizedRPM = max(600, min(combinedFanRPM / max(1, appState.currentThermalDetails.fanSpeedsRPM.count), 5000))
+        let progress = Double(normalizedRPM - 600) / 4400.0
+        return 1.1 - (0.7 * progress)
+    }
+
+    private func updateFanAnimationState() {
+        if fanIsRunning {
+            spinsFan = true
+        } else {
+            spinsFan = false
+        }
     }
 }
 

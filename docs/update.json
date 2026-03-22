@@ -1,7 +1,7 @@
 {
-  "version": "1.0.53",
-  "build": 153,
-  "notes": "Replace the Thermals tab backend with direct AppleSMC sensor reads, matching the monitoring architecture used by dedicated fan and thermal utilities.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.53/TaskManagerPro-1.0.53-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.53/TaskManagerPro-1.0.53-intel.dmg"
+  "version": "1.0.54",
+  "build": 154,
+  "notes": "Improve the Thermals tab with animated fan speed, palm-rest temperature, and readable sensor names.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.54/TaskManagerPro-1.0.54-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.54/TaskManagerPro-1.0.54-intel.dmg"
 }
