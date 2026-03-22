@@ -220,12 +220,6 @@ struct FanSpeedSnapshot: Identifiable, Hashable {
     let maxRPM: Int
 }
 
-struct FanPreset: Identifiable, Hashable, Codable {
-    let id: UUID
-    var name: String
-    var speedsRPM: [Int]
-}
-
 struct UpdateFeed: Decodable {
     let version: String
     let build: Int

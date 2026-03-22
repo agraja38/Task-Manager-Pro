@@ -34,7 +34,6 @@ private struct SMCParamStruct {
     enum Selector: UInt8 {
         case handleYPCEvent = 2
         case readKey = 5
-        case writeKey = 6
         case getKeyFromIndex = 8
         case getKeyInfo = 9
     }
@@ -372,42 +371,6 @@ final class SMCReader {
         }
     }
 
-    func setManualFanSpeeds(_ speedsByFanIndex: [Int: Int]) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        try ensureOpen()
-
-        let fans = try readFans()
-        let fanByIndex = Dictionary(uniqueKeysWithValues: fans.map { ($0.index, $0) })
-        let requestedIndices = Set(speedsByFanIndex.keys)
-
-        try setForcedFansMask(requestedIndices)
-
-        for (index, requestedRPM) in speedsByFanIndex.sorted(by: { $0.key < $1.key }) {
-            guard let fan = fanByIndex[index] else { continue }
-            let clampedRPM = max(fan.minRPM, min(requestedRPM, fan.maxRPM))
-            try setFanManualMode(index: index, manual: true)
-            try setFanTarget(index: index, rpm: clampedRPM)
-        }
-    }
-
-    func restoreAutomaticFanControl() throws {
-        lock.lock()
-        defer { lock.unlock() }
-        try ensureOpen()
-
-        let fanCount: Int
-        if let cachedFanCount {
-            fanCount = cachedFanCount
-        } else {
-            fanCount = try readFans().count
-        }
-        try setForcedFansMask([])
-        for index in 0 ..< fanCount {
-            try setFanManualMode(index: index, manual: false)
-        }
-    }
-
     private func readFanName(index: Int) -> String? {
         let nameCode = FourCharCode(fromString: "F\(index)ID")
         guard let info = try? keyInfo(for: nameCode), info == .fds else {
@@ -428,106 +391,6 @@ final class SMCReader {
         let key = SMCKey(code: keyCode, info: info)
         guard let value = try? decodeNumericValue(for: key) else { return nil }
         return max(0, Int(value.rounded()))
-    }
-
-    private func writeData(_ bytes: [UInt8], for key: SMCKey) throws {
-        var input = SMCParamStruct()
-        input.key = key.code
-        input.data8 = SMCParamStruct.Selector.writeKey.rawValue
-        input.keyInfo.dataSize = key.info.size
-
-        var paddedBytes = Array(bytes.prefix(Int(key.info.size)))
-        if paddedBytes.count < Int(key.info.size) {
-            paddedBytes.append(contentsOf: repeatElement(0, count: Int(key.info.size) - paddedBytes.count))
-        }
-
-        withUnsafeMutableBytes(of: &input.bytes) { rawBuffer in
-            let destination = rawBuffer.bindMemory(to: UInt8.self)
-            for (offset, byte) in paddedBytes.enumerated() {
-                destination[offset] = byte
-            }
-        }
-
-        _ = try callDriver(&input)
-    }
-
-    private func writeNumericValue(_ value: Int, to code: FourCharCode) throws {
-        let info = try keyInfo(for: code)
-        let key = SMCKey(code: code, info: info)
-
-        switch info {
-        case .fpe2:
-            let scaled = max(0, Int(round(Double(value) * 4.0)))
-            try writeData([
-                UInt8((scaled >> 6) & 0xff),
-                UInt8((scaled << 2) & 0xff)
-            ], for: key)
-        case .ui8:
-            try writeData([UInt8(max(0, min(value, 255)))], for: key)
-        case .ui16:
-            let clamped = UInt16(max(0, min(value, Int(UInt16.max))))
-            try writeData([UInt8((clamped >> 8) & 0xff), UInt8(clamped & 0xff)], for: key)
-        case .ui32:
-            let clamped = UInt32(max(0, value))
-            try writeData([
-                UInt8((clamped >> 24) & 0xff),
-                UInt8((clamped >> 16) & 0xff),
-                UInt8((clamped >> 8) & 0xff),
-                UInt8(clamped & 0xff)
-            ], for: key)
-        default:
-            throw SMCReaderError.unsupportedDataType(info.code.toString())
-        }
-    }
-
-    private func setFanManualMode(index: Int, manual: Bool) throws {
-        let modeCode = FourCharCode(fromString: "F\(index)Md")
-        guard let _ = try? keyInfo(for: modeCode) else { return }
-        try writeNumericValue(manual ? 1 : 0, to: modeCode)
-    }
-
-    private func setForcedFansMask(_ indices: Set<Int>) throws {
-        let maskCode = FourCharCode(fromString: "FS! ")
-        guard let info = try? keyInfo(for: maskCode) else { return }
-        let key = SMCKey(code: maskCode, info: info)
-        let maskValue = indices.reduce(0) { partialResult, index in
-            partialResult | (1 << index)
-        }
-
-        switch info {
-        case .ui8:
-            try writeData([UInt8(maskValue & 0xff)], for: key)
-        case .ui16:
-            try writeData([UInt8((maskValue >> 8) & 0xff), UInt8(maskValue & 0xff)], for: key)
-        case .ui32:
-            try writeData([
-                UInt8((maskValue >> 24) & 0xff),
-                UInt8((maskValue >> 16) & 0xff),
-                UInt8((maskValue >> 8) & 0xff),
-                UInt8(maskValue & 0xff)
-            ], for: key)
-        default:
-            break
-        }
-    }
-
-    private func setFanTarget(index: Int, rpm: Int) throws {
-        let targetCandidates = [
-            FourCharCode(fromString: "F\(index)Tg"),
-            FourCharCode(fromString: "F\(index)Mn")
-        ]
-
-        var wroteTarget = false
-        for code in targetCandidates {
-            if let _ = try? keyInfo(for: code) {
-                try writeNumericValue(rpm, to: code)
-                wroteTarget = true
-            }
-        }
-
-        if !wroteTarget {
-            throw SMCReaderError.keyNotFound("F\(index)Tg/F\(index)Mn")
-        }
     }
 
     private func decodeNumericValue(for key: SMCKey) throws -> Double {
