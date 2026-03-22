@@ -579,6 +579,7 @@ struct NetworkView: View {
 struct ThermalsView: View {
     @EnvironmentObject private var appState: AppState
     @State private var spinsFan = false
+    @State private var presetName = ""
 
     private var combinedFanRPM: Int {
         appState.currentThermalDetails.fanSpeedsRPM.reduce(0) { $0 + $1.rpm }
@@ -616,6 +617,64 @@ struct ThermalsView: View {
                     .padding(.vertical, 8)
                 }
 
+                GroupBox("Fan Control") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        if appState.currentThermalDetails.fanSpeedsRPM.isEmpty {
+                            Text("Manual fan control appears here when Task Manager Pro can read the fans on this Mac.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(appState.currentThermalDetails.fanSpeedsRPM) { fan in
+                                fanControlRow(fan)
+                            }
+
+                            HStack(spacing: 10) {
+                                Button("Apply") {
+                                    appState.applyCurrentFanControl()
+                                }
+                                .buttonStyle(.borderedProminent)
+
+                                Button("Auto") {
+                                    appState.restoreAutomaticFanControl()
+                                }
+
+                                Spacer()
+                            }
+
+                            Divider()
+
+                            HStack(spacing: 10) {
+                                TextField("Preset name", text: $presetName)
+                                    .textFieldStyle(.roundedBorder)
+                                Button("Save Preset") {
+                                    appState.saveCurrentFanPreset(named: presetName)
+                                    presetName = ""
+                                }
+                                .disabled(presetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
+
+                            if !appState.fanPresets.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Presets")
+                                        .font(.headline)
+                                    ForEach(appState.fanPresets) { preset in
+                                        HStack {
+                                            Text(preset.name)
+                                            Spacer()
+                                            Button("Apply") {
+                                                appState.applyFanPreset(preset)
+                                            }
+                                            Button("Delete", role: .destructive) {
+                                                appState.deleteFanPreset(preset)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+
                 GroupBox("Temperatures") {
                     VStack(spacing: 10) {
                         if appState.currentThermalDetails.hottestSensors.isEmpty {
@@ -624,18 +683,18 @@ struct ThermalsView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             ForEach(appState.currentThermalDetails.hottestSensors) { sensor in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text(sensor.name)
-                                            .font(.headline)
-                                        Spacer()
-                                        Text(String(format: "%.1f C", sensor.valueC))
-                                            .font(.headline.monospacedDigit())
-                                            .foregroundStyle(.red)
-                                    }
-                                    Text(sensor.key)
+                                HStack(spacing: 10) {
+                                    Text(sensor.name)
+                                        .font(.headline)
+                                        .lineLimit(1)
+                                    Text("(\(sensor.key))")
                                         .font(.caption.monospaced())
                                         .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text(String(format: "%.1f C", sensor.valueC))
+                                        .font(.headline.monospacedDigit())
+                                        .foregroundStyle(.red)
                                 }
                                 .padding(12)
                                 .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -712,6 +771,59 @@ struct ThermalsView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    @ViewBuilder
+    private func fanControlRow(_ fan: FanSpeedSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(fan.name)
+                    .font(.headline)
+                Spacer()
+                Text("Min \(fan.minRPM) • Max \(fan.maxRPM)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 12) {
+                Slider(
+                    value: fanSliderBinding(for: fan),
+                    in: Double(fan.minRPM)...Double(fan.maxRPM),
+                    step: 50
+                )
+                TextField("RPM", value: fanTextBinding(for: fan), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 92)
+            }
+        }
+        .padding(12)
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+        )
+    }
+
+    private func fanSliderBinding(for fan: FanSpeedSnapshot) -> Binding<Double> {
+        Binding(
+            get: {
+                Double(appState.manualFanSpeedsRPM.indices.contains(fan.index) ? appState.manualFanSpeedsRPM[fan.index] : fan.rpm)
+            },
+            set: { newValue in
+                appState.setManualFanSpeed(Int(newValue.rounded()), at: fan.index)
+            }
+        )
+    }
+
+    private func fanTextBinding(for fan: FanSpeedSnapshot) -> Binding<Int> {
+        Binding(
+            get: {
+                appState.manualFanSpeedsRPM.indices.contains(fan.index) ? appState.manualFanSpeedsRPM[fan.index] : fan.rpm
+            },
+            set: { newValue in
+                appState.setManualFanSpeed(newValue, at: fan.index)
+            }
+        )
     }
 
     private var fanSpeedValue: String {
@@ -942,22 +1054,21 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
                 }
 
-                GroupBox("Advanced Mode") {
+                GroupBox("Mode") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Show advanced telemetry widgets", isOn: $appState.showsAdvancedTelemetryWidgets)
+                        Picker("Mode", selection: $appState.appMode) {
+                            ForEach(AppMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
 
-                        Text("Advanced mode unlocks deeper monitoring views for power users while keeping the standard dashboard clean for everyday use.")
+                        Text("Pick the experience that matches how deep you want Task Manager Pro to go.")
                             .foregroundStyle(.secondary)
 
-                        Text("Advanced mode includes:")
-                            .font(.headline)
-
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("• GPU usage in the Performance and Processes views")
-                            Text("• Cached Files monitoring with quick cache clearing")
-                            Text("• A dedicated Network tab with interfaces, routing, DNS, and live connections")
-                            Text("• A dedicated Thermals tab with temperatures, fan speeds, and thermal state")
-                            Text("• Expanded sorting and live telemetry for power-user workflows")
+                            Text("Basic: CPU, memory, disk, and network monitoring for everyday use.")
+                            Text("Advance: GPU and cache insights, the Network tab, the Thermals tab, and power-user controls like fan presets.")
                         }
                         .foregroundStyle(.secondary)
                     }

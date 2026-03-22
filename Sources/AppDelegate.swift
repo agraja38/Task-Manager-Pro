@@ -98,18 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
             item.button?.font = .monospacedSystemFont(ofSize: 11, weight: .medium)
-
-            let menu = NSMenu()
-            menu.addItem(withTitle: "Open Task Manager Pro", action: #selector(openMainWindow), keyEquivalent: "")
-            menu.addItem(NSMenuItem.separator())
-            menu.addItem(withTitle: "Clear Memory", action: #selector(clearMemory), keyEquivalent: "")
-            menu.addItem(withTitle: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
-            menu.addItem(NSMenuItem.separator())
-            menu.addItem(withTitle: "Quit Task Manager Pro", action: #selector(quitApp), keyEquivalent: "q")
-            item.menu = menu
+            item.menu = NSMenu()
             statusItem = item
         }
 
+        rebuildStatusMenu()
         updateStatusItemDisplay()
     }
 
@@ -165,7 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func clearMemory() {
-        AppState.shared.clearMemory()
+        AppState.shared.clearCache()
     }
 
     @objc private func quitApp() {
@@ -225,6 +218,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func removeTwoLineStatusView() {
         twoLineStatusView?.removeFromSuperview()
         twoLineStatusView = nil
+    }
+
+    private func rebuildStatusMenu() {
+        guard let menu = statusItem?.menu else { return }
+        menu.removeAllItems()
+
+        menu.addItem(withTitle: "Open Task Manager Pro", action: #selector(openMainWindow), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Clear Cache", action: #selector(clearMemory), keyEquivalent: "")
+
+        if AppState.shared.showsAdvancedTelemetryWidgets, !AppState.shared.fanPresets.isEmpty {
+            let presetsItem = NSMenuItem(title: "Fan Presets", action: nil, keyEquivalent: "")
+            let presetsMenu = NSMenu()
+
+            let autoItem = NSMenuItem(title: "Automatic Control", action: #selector(restoreAutomaticFanControl), keyEquivalent: "")
+            autoItem.target = self
+            presetsMenu.addItem(autoItem)
+            presetsMenu.addItem(NSMenuItem.separator())
+
+            for preset in AppState.shared.fanPresets {
+                let item = NSMenuItem(title: preset.name, action: #selector(applyFanPresetFromMenu(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = preset.id.uuidString
+                presetsMenu.addItem(item)
+            }
+
+            presetsItem.submenu = presetsMenu
+            menu.addItem(presetsItem)
+        }
+
+        menu.addItem(withTitle: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Quit Task Manager Pro", action: #selector(quitApp), keyEquivalent: "q")
+    }
+
+    @objc private func restoreAutomaticFanControl() {
+        AppState.shared.restoreAutomaticFanControl()
+    }
+
+    @objc private func applyFanPresetFromMenu(_ sender: NSMenuItem) {
+        guard
+            let idString = sender.representedObject as? String,
+            let id = UUID(uuidString: idString),
+            let preset = AppState.shared.fanPresets.first(where: { $0.id == id })
+        else {
+            return
+        }
+
+        AppState.shared.applyFanPreset(preset)
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {

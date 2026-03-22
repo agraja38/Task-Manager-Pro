@@ -35,6 +35,13 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum AppMode: String, CaseIterable, Identifiable {
+    case basic = "Basic"
+    case advance = "Advance"
+
+    var id: String { rawValue }
+}
+
 enum CPUGraphMode: String, CaseIterable, Identifiable {
     case overall = "Overall"
     case cores = "CPU Cores"
@@ -205,9 +212,18 @@ struct ThermalSensorSnapshot: Identifiable, Hashable {
 }
 
 struct FanSpeedSnapshot: Identifiable, Hashable {
-    var id: String { name }
+    var id: Int { index }
+    let index: Int
     let name: String
     let rpm: Int
+    let minRPM: Int
+    let maxRPM: Int
+}
+
+struct FanPreset: Identifiable, Hashable, Codable {
+    let id: UUID
+    var name: String
+    var speedsRPM: [Int]
 }
 
 struct UpdateFeed: Decodable {

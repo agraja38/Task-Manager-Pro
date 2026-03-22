@@ -34,6 +34,7 @@ private struct SMCParamStruct {
     enum Selector: UInt8 {
         case handleYPCEvent = 2
         case readKey = 5
+        case writeKey = 6
         case getKeyFromIndex = 8
         case getKeyInfo = 9
     }
@@ -219,7 +220,7 @@ final class SMCReader {
             gpuTemperatureC: gpuTemperature,
             palmRestTemperatureC: palmRestTemperature,
             fanSpeedsRPM: fans,
-            hottestSensors: Array(sensors.sorted { $0.valueC > $1.valueC }.prefix(12)),
+            hottestSensors: Array(orderedSensors(sensors).prefix(12)),
             thermalLevel: currentThermalLevel,
             note: note,
             requiresPrivilege: false,
@@ -364,8 +365,46 @@ final class SMCReader {
             let key = SMCKey(code: speedKey, info: info)
             guard let rpmValue = try? decodeNumericValue(for: key) else { return nil }
             let rpm = max(0, Int(rpmValue.rounded()))
+            let minRPM = readFanBound(index: fanIndex, suffix: "Mn") ?? 1200
+            let maxRPM = readFanBound(index: fanIndex, suffix: "Mx") ?? max(rpm, minRPM)
             let name = readFanName(index: fanIndex) ?? "Fan \(fanIndex + 1)"
-            return FanSpeedSnapshot(name: name, rpm: rpm)
+            return FanSpeedSnapshot(index: fanIndex, name: name, rpm: rpm, minRPM: minRPM, maxRPM: maxRPM)
+        }
+    }
+
+    func setManualFanSpeeds(_ speedsByFanIndex: [Int: Int]) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        try ensureOpen()
+
+        let fans = try readFans()
+        let fanByIndex = Dictionary(uniqueKeysWithValues: fans.map { ($0.index, $0) })
+        let requestedIndices = Set(speedsByFanIndex.keys)
+
+        try setForcedFansMask(requestedIndices)
+
+        for (index, requestedRPM) in speedsByFanIndex.sorted(by: { $0.key < $1.key }) {
+            guard let fan = fanByIndex[index] else { continue }
+            let clampedRPM = max(fan.minRPM, min(requestedRPM, fan.maxRPM))
+            try setFanManualMode(index: index, manual: true)
+            try setFanTarget(index: index, rpm: clampedRPM)
+        }
+    }
+
+    func restoreAutomaticFanControl() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        try ensureOpen()
+
+        let fanCount: Int
+        if let cachedFanCount {
+            fanCount = cachedFanCount
+        } else {
+            fanCount = try readFans().count
+        }
+        try setForcedFansMask([])
+        for index in 0 ..< fanCount {
+            try setFanManualMode(index: index, manual: false)
         }
     }
 
@@ -381,6 +420,114 @@ final class SMCReader {
         let raw = [data.4, data.5, data.6, data.7, data.8, data.9, data.10, data.11, data.12, data.13, data.14, data.15]
         let name = String(bytes: raw.filter { $0 > 32 }, encoding: .ascii)?.trimmingCharacters(in: .whitespacesAndNewlines)
         return name?.isEmpty == false ? name : nil
+    }
+
+    private func readFanBound(index: Int, suffix: String) -> Int? {
+        let keyCode = FourCharCode(fromString: "F\(index)\(suffix)")
+        guard let info = try? keyInfo(for: keyCode) else { return nil }
+        let key = SMCKey(code: keyCode, info: info)
+        guard let value = try? decodeNumericValue(for: key) else { return nil }
+        return max(0, Int(value.rounded()))
+    }
+
+    private func writeData(_ bytes: [UInt8], for key: SMCKey) throws {
+        var input = SMCParamStruct()
+        input.key = key.code
+        input.data8 = SMCParamStruct.Selector.writeKey.rawValue
+        input.keyInfo.dataSize = key.info.size
+
+        var paddedBytes = Array(bytes.prefix(Int(key.info.size)))
+        if paddedBytes.count < Int(key.info.size) {
+            paddedBytes.append(contentsOf: repeatElement(0, count: Int(key.info.size) - paddedBytes.count))
+        }
+
+        withUnsafeMutableBytes(of: &input.bytes) { rawBuffer in
+            let destination = rawBuffer.bindMemory(to: UInt8.self)
+            for (offset, byte) in paddedBytes.enumerated() {
+                destination[offset] = byte
+            }
+        }
+
+        _ = try callDriver(&input)
+    }
+
+    private func writeNumericValue(_ value: Int, to code: FourCharCode) throws {
+        let info = try keyInfo(for: code)
+        let key = SMCKey(code: code, info: info)
+
+        switch info {
+        case .fpe2:
+            let scaled = max(0, Int(round(Double(value) * 4.0)))
+            try writeData([
+                UInt8((scaled >> 6) & 0xff),
+                UInt8((scaled << 2) & 0xff)
+            ], for: key)
+        case .ui8:
+            try writeData([UInt8(max(0, min(value, 255)))], for: key)
+        case .ui16:
+            let clamped = UInt16(max(0, min(value, Int(UInt16.max))))
+            try writeData([UInt8((clamped >> 8) & 0xff), UInt8(clamped & 0xff)], for: key)
+        case .ui32:
+            let clamped = UInt32(max(0, value))
+            try writeData([
+                UInt8((clamped >> 24) & 0xff),
+                UInt8((clamped >> 16) & 0xff),
+                UInt8((clamped >> 8) & 0xff),
+                UInt8(clamped & 0xff)
+            ], for: key)
+        default:
+            throw SMCReaderError.unsupportedDataType(info.code.toString())
+        }
+    }
+
+    private func setFanManualMode(index: Int, manual: Bool) throws {
+        let modeCode = FourCharCode(fromString: "F\(index)Md")
+        guard let _ = try? keyInfo(for: modeCode) else { return }
+        try writeNumericValue(manual ? 1 : 0, to: modeCode)
+    }
+
+    private func setForcedFansMask(_ indices: Set<Int>) throws {
+        let maskCode = FourCharCode(fromString: "FS! ")
+        guard let info = try? keyInfo(for: maskCode) else { return }
+        let key = SMCKey(code: maskCode, info: info)
+        let maskValue = indices.reduce(0) { partialResult, index in
+            partialResult | (1 << index)
+        }
+
+        switch info {
+        case .ui8:
+            try writeData([UInt8(maskValue & 0xff)], for: key)
+        case .ui16:
+            try writeData([UInt8((maskValue >> 8) & 0xff), UInt8(maskValue & 0xff)], for: key)
+        case .ui32:
+            try writeData([
+                UInt8((maskValue >> 24) & 0xff),
+                UInt8((maskValue >> 16) & 0xff),
+                UInt8((maskValue >> 8) & 0xff),
+                UInt8(maskValue & 0xff)
+            ], for: key)
+        default:
+            break
+        }
+    }
+
+    private func setFanTarget(index: Int, rpm: Int) throws {
+        let targetCandidates = [
+            FourCharCode(fromString: "F\(index)Tg"),
+            FourCharCode(fromString: "F\(index)Mn")
+        ]
+
+        var wroteTarget = false
+        for code in targetCandidates {
+            if let _ = try? keyInfo(for: code) {
+                try writeNumericValue(rpm, to: code)
+                wroteTarget = true
+            }
+        }
+
+        if !wroteTarget {
+            throw SMCReaderError.keyNotFound("F\(index)Tg/F\(index)Mn")
+        }
     }
 
     private func decodeNumericValue(for key: SMCKey) throws -> Double {
@@ -420,6 +567,39 @@ final class SMCReader {
             .filter { sensor in prefixes.contains { sensor.key.hasPrefix($0) } }
             .map(\.valueC)
             .max()
+    }
+
+    private func orderedSensors(_ sensors: [ThermalSensorSnapshot]) -> [ThermalSensorSnapshot] {
+        sensors.sorted { lhs, rhs in
+            let lhsRank = sensorSortRank(lhs)
+            let rhsRank = sensorSortRank(rhs)
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+            if lhs.name != rhs.name {
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            return lhs.key < rhs.key
+        }
+    }
+
+    private func sensorSortRank(_ sensor: ThermalSensorSnapshot) -> Int {
+        if Self.cpuPriorityKeys.contains(sensor.key) || sensor.key.hasPrefix("TC") || sensor.key.hasPrefix("Te") || sensor.key.hasPrefix("Tp") || sensor.key.hasPrefix("Tf") {
+            return 0
+        }
+        if Self.gpuPriorityKeys.contains(sensor.key) || sensor.key.hasPrefix("TG") || sensor.key.hasPrefix("Tg") {
+            return 1
+        }
+        if Self.palmRestPriorityKeys.contains(sensor.key) || sensor.key.hasPrefix("TS") || sensor.key.hasPrefix("Ta") {
+            return 2
+        }
+        if sensor.key.hasPrefix("TV") {
+            return 3
+        }
+        if sensor.key.hasPrefix("TB") {
+            return 4
+        }
+        return 5
     }
 
     private func displayName(for key: String) -> String {
