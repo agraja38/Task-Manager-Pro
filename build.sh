@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.54"
-BUILD_NUMBER="154"
+VERSION="1.0.55"
+BUILD_NUMBER="155"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.54",
-  "build": 154,
-  "notes": "Improve the Thermals tab with animated fan speed, palm-rest temperature, and readable sensor names.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.54/TaskManagerPro-1.0.54-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.54/TaskManagerPro-1.0.54-intel.dmg"
+  "version": "1.0.55",
+  "build": 155,
+  "notes": "Keep the Thermals header on one line and show separate fan speeds for multi-fan Macs.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.55/TaskManagerPro-1.0.55-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.55/TaskManagerPro-1.0.55-intel.dmg"
 }
 JSON
 

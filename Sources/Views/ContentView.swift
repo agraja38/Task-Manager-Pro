@@ -588,13 +588,17 @@ struct ThermalsView: View {
         combinedFanRPM > 0
     }
 
+    private var topThermalColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 14), count: 4)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Thermals")
                     .font(.system(size: 28, weight: .bold))
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                LazyVGrid(columns: topThermalColumns, spacing: 14) {
                     MetricBadge(title: "CPU Temp", value: temperatureString(appState.currentThermalDetails.cpuTemperatureC), color: .red, prominence: .large)
                     MetricBadge(title: "GPU Temp", value: temperatureString(appState.currentThermalDetails.gpuTemperatureC), color: .orange, prominence: .large)
                     fanMetricCard
@@ -690,9 +694,9 @@ struct ThermalsView: View {
     @ViewBuilder
     private var fanMetricCard: some View {
         GroupBox {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 Image(systemName: "fan.fill")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(fanIsRunning ? Color.cyan : Color.secondary)
                     .rotationEffect(.degrees(spinsFan ? 360 : 0))
                     .animation(
@@ -707,16 +711,32 @@ struct ThermalsView: View {
                     Text("Fan Speed")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Text(fanSpeedValue)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                    Text(fanSpeedSubtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if appState.currentThermalDetails.fanSpeedsRPM.count <= 1 {
+                        Text(fanSpeedValue)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                        Text(fanSpeedSubtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(appState.currentThermalDetails.fanSpeedsRPM.prefix(2)) { fan in
+                                HStack(spacing: 6) {
+                                    Text(fan.name)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Spacer(minLength: 6)
+                                    Text("\(fan.rpm) rpm")
+                                        .font(.subheadline.monospacedDigit().weight(.bold))
+                                }
+                            }
+                        }
+                    }
                 }
                 Spacer()
             }
             .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
