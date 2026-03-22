@@ -599,9 +599,9 @@ struct ThermalsView: View {
                     .font(.system(size: 28, weight: .bold))
 
                 LazyVGrid(columns: topThermalColumns, spacing: 14) {
+                    fanMetricCard
                     MetricBadge(title: "CPU Temp", value: temperatureString(appState.currentThermalDetails.cpuTemperatureC), color: .red, prominence: .large)
                     MetricBadge(title: "GPU Temp", value: temperatureString(appState.currentThermalDetails.gpuTemperatureC), color: .orange, prominence: .large)
-                    fanMetricCard
                     MetricBadge(title: "Palm Rest", value: temperatureString(appState.currentThermalDetails.palmRestTemperatureC), color: .pink, prominence: .large)
                 }
 
@@ -649,32 +649,6 @@ struct ThermalsView: View {
                     .padding(.vertical, 8)
                 }
 
-                GroupBox("Fans") {
-                    VStack(spacing: 10) {
-                        if appState.currentThermalDetails.fanSpeedsRPM.isEmpty {
-                            Text("Fan speed data is unavailable right now, or this Mac does not expose fan RPM through AppleSMC.")
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            ForEach(appState.currentThermalDetails.fanSpeedsRPM) { fan in
-                                HStack {
-                                    Text(fan.name)
-                                        .font(.headline)
-                                    Spacer()
-                                    Text("\(fan.rpm) rpm")
-                                        .font(.headline.monospacedDigit())
-                                }
-                                .padding(12)
-                                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
-                                )
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
             }
             .padding(20)
         }

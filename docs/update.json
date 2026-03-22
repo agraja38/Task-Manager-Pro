@@ -1,7 +1,7 @@
 {
-  "version": "1.0.55",
-  "build": 155,
-  "notes": "Keep the Thermals header on one line and show separate fan speeds for multi-fan Macs.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.55/TaskManagerPro-1.0.55-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.55/TaskManagerPro-1.0.55-intel.dmg"
+  "version": "1.0.56",
+  "build": 156,
+  "notes": "Move fan speed to the first Thermals card and remove the duplicate fan list at the bottom.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.56/TaskManagerPro-1.0.56-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.56/TaskManagerPro-1.0.56-intel.dmg"
 }
