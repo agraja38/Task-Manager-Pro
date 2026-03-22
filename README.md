@@ -1,58 +1,72 @@
 # Task Manager Pro
 
-Task Manager Pro is a native-style macOS Task Manager built with SwiftUI and AppKit. It brings the familiar Windows Task Manager workflow to macOS with a clean top navigation layout, real-time charts, safe process controls, and a built-in updater.
+Task Manager Pro is a polished macOS system monitor built for people who want a cleaner, more powerful alternative to jumping between Activity Monitor, network tools, and temperature utilities.
 
-License: MIT. See [LICENSE](LICENSE).
+It gives you a modern Mac-native dashboard for processes, performance, thermals, and network activity, with a fast UI, safe app controls, menu bar monitoring, and built-in updating.
 
 [Download for Apple Silicon Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.56/TaskManagerPro-1.0.56-apple-silicon.dmg)
 
 [Download for Intel Macs](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.56/TaskManagerPro-1.0.56-intel.dmg)
 
-## Highlights
+## Why Task Manager Pro
 
-- Processes view with app icons, app names, live CPU/memory, and quick actions
-- Processes header badges for CPU, memory, GPU, and network at a glance
-- Safe `Quit`, `Terminate`, and `Force Quit` actions with warnings for critical macOS processes
-- Performance dashboard with live CPU, memory, disk, network, GPU fallback, and thermal-state cards
-- Right-click the CPU widget to switch between overall CPU activity and a per-core grid of mini CPU graphs
-- Normal mode keeps the dashboard focused on CPU, memory, disk, and network, while advanced telemetry mode shows the extra GPU and Battery & System widgets
-- Search, sort, filter, dark mode, and resource-heavy highlighting
-- Menu bar live monitor with Off, Compact, and Two-Line display modes
-- Settings for Dock icon visibility and app appearance
-- Built-in update flow that downloads the latest DMG, installs it in the background, and reopens the app
-- Separate Apple Silicon and Intel drag-and-drop DMG builds
+- See what is using your Mac at a glance
+- Monitor CPU, RAM, disk, network, GPU, and thermals from one app
+- Quit, terminate, or force quit apps quickly and safely
+- Watch live resource usage with clear charts and a lightweight menu bar view
+- Get a simple everyday view for normal users and deeper telemetry for power users
 
-## macOS Notes
+## What It Can Do
 
-- Task Manager Pro uses public APIs first and falls back to safe alternatives when macOS restricts direct low-level telemetry.
-- Advanced-mode thermal readings are pulled directly from AppleSMC on supported Macs, which is the same monitoring path used by dedicated fan and thermal utilities.
-- GPU usage still depends on best-effort macOS graphics telemetry and can vary by hardware generation.
-- Some process terminations may still be denied by macOS if the current user does not own the target process or the process is protected.
+- Processes tab with live per-app CPU, GPU, and memory usage
+- Quick actions for `Quit`, `Terminate`, and `Force Quit`
+- Performance dashboard with real-time CPU, RAM, disk, and network charts
+- Right-click CPU widget to switch between overall CPU activity and per-core mini graphs
+- Advanced Network tab with interfaces, routing, DNS, and active connection details
+- Advanced Thermals tab with CPU temp, GPU temp, palm-rest temp, live fan RPM, and readable sensor names
+- Search, sorting, filtering, and resource-heavy app highlighting
+- Menu bar monitor with `Off`, `Compact`, and `Two-Line` display modes
+- Light mode, dark mode, or follow system appearance
+- Optional Dock icon visibility
+- Built-in background updater
+
+## Built For
+
+- Mac users who want a cleaner replacement for Activity Monitor
+- Power users who want deeper diagnostics without juggling multiple tools
+- Developers, creators, and professionals who want live visibility into system load
 
 ## Advanced Mode
 
-Advanced mode unlocks a deeper monitoring layout for power users while keeping the default experience focused and lightweight.
+Advanced mode unlocks the deeper monitoring views while keeping the default experience focused and simple.
 
 It adds:
 
-- GPU usage in the Performance and Processes views
-- A dedicated Network tab with interfaces, routing, DNS, and active connection details
-- A dedicated Thermals tab with CPU temperature, GPU temperature, hottest sensors, and live fan RPM
-- Expanded live telemetry and extra monitoring surfaces for deeper diagnostics
+- GPU visibility in more parts of the app
+- Full Network monitoring
+- Full Thermals monitoring
+- Expanded live telemetry for troubleshooting and performance analysis
 
-## Updating
+## macOS-Friendly Design
 
-Task Manager Pro checks a GitHub-hosted `docs/update.json` feed. The in-app updater downloads the latest signed disk image, replaces the installed app in the background, and reopens Task Manager Pro automatically.
+- Native macOS look and feel
+- Efficient background sampling
+- Safe process controls with protection against obviously critical system processes
+- Public APIs first, with best-effort fallbacks where macOS restricts deeper access
+- Direct AppleSMC thermal reads on supported Macs for detailed temperature and fan monitoring
 
-When publishing a new version:
+## Download
 
-1. Build new DMG images.
-2. Upload the DMG files to a GitHub release.
-3. Update `docs/update.json` with the new version and asset URL.
+Task Manager Pro is available as drag-and-drop DMG installers:
 
-## Project Structure
+- [Apple Silicon DMG](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.56/TaskManagerPro-1.0.56-apple-silicon.dmg)
+- [Intel DMG](https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.56/TaskManagerPro-1.0.56-intel.dmg)
+
+## For Developers
+
+License: MIT. See [LICENSE](LICENSE).
 
 - `Sources/` contains the app, views, models, and service modules
 - `AppBundle/Contents/Info.plist` defines the app bundle metadata
-- `build.sh` creates architecture-specific app bundles, drag-and-drop DMGs, and the update feed
+- `build.sh` creates architecture-specific app bundles, DMGs, and the update feed
 - `docs/update.json` is the updater manifest
