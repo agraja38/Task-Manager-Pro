@@ -5,8 +5,9 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.61"
-BUILD_NUMBER="161"
+VERSION="1.0.62"
+BUILD_NUMBER="162"
+HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -17,6 +18,8 @@ ARM_BIN="$BUILD_DIR/${APP_NAME}-arm64"
 X64_BIN="$BUILD_DIR/${APP_NAME}-x86_64"
 ARM_SHIM_OBJ="$BUILD_DIR/PrivilegedExecShim-arm64.o"
 X64_SHIM_OBJ="$BUILD_DIR/PrivilegedExecShim-x86_64.o"
+ARM_HELPER_BIN="$BUILD_DIR/${HELPER_NAME}-arm64"
+X64_HELPER_BIN="$BUILD_DIR/${HELPER_NAME}-x86_64"
 ICONSET_DIR="$ROOT_DIR/${APP_NAME}.iconset"
 ICNS_PATH="$BUILD_DIR/${APP_NAME}.icns"
 APPLE_SILICON_DIR="$BUILD_DIR/apple-silicon"
@@ -52,10 +55,13 @@ clang -target x86_64-apple-macos13.0 -c "$ROOT_DIR/Support/PrivilegedExecShim.c"
 
 swiftc -target arm64-apple-macos13.0 "${COMMON_FLAGS[@]}" "$ARM_SHIM_OBJ" "${SOURCE_FILES[@]}" -o "$ARM_BIN"
 swiftc -target x86_64-apple-macos13.0 "${COMMON_FLAGS[@]}" "$X64_SHIM_OBJ" "${SOURCE_FILES[@]}" -o "$X64_BIN"
+swiftc -target arm64-apple-macos13.0 -framework Foundation -framework IOKit "$ROOT_DIR/Support/FanControlHelper.swift" -o "$ARM_HELPER_BIN"
+swiftc -target x86_64-apple-macos13.0 -framework Foundation -framework IOKit "$ROOT_DIR/Support/FanControlHelper.swift" -o "$X64_HELPER_BIN"
 
 create_app_bundle() {
   local bin_path="$1"
   local app_path="$2"
+  local helper_path="$3"
   local contents_dir="$app_path/Contents"
   local macos_dir="$contents_dir/MacOS"
   local resources_dir="$contents_dir/Resources"
@@ -65,6 +71,8 @@ create_app_bundle() {
   cp "$bin_path" "$macos_dir/$APP_NAME"
   chmod +x "$macos_dir/$APP_NAME"
   cp "$ICNS_PATH" "$resources_dir/${APP_NAME}.icns"
+  cp "$helper_path" "$resources_dir/$HELPER_NAME"
+  chmod +x "$resources_dir/$HELPER_NAME"
   xattr -cr "$app_path" 2>/dev/null || true
   xattr -d com.apple.FinderInfo "$app_path" 2>/dev/null || true
   xattr -d com.apple.fileprovider.fpfs#P "$app_path" 2>/dev/null || true
@@ -73,8 +81,8 @@ create_app_bundle() {
   codesign --verify --deep --strict --verbose=2 "$app_path"
 }
 
-create_app_bundle "$ARM_BIN" "$APPLE_SILICON_APP"
-create_app_bundle "$X64_BIN" "$INTEL_APP"
+create_app_bundle "$ARM_BIN" "$APPLE_SILICON_APP" "$ARM_HELPER_BIN"
+create_app_bundle "$X64_BIN" "$INTEL_APP" "$X64_HELPER_BIN"
 
 build_dmg() {
   local app_path="$1"
@@ -94,14 +102,16 @@ if [[ "$(uname -m)" == "arm64" ]]; then
 else
   cp -R "$INTEL_APP" "$HOST_APP"
 fi
+xattr -cr "$HOST_APP" 2>/dev/null || true
+xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.61",
-  "build": 161,
-  "notes": "Reintroduce fan presets on a simpler minimum-speed write path and tighten the thermal sensor selection to avoid misleading readings.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.61/TaskManagerPro-1.0.61-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.61/TaskManagerPro-1.0.61-intel.dmg"
+  "version": "1.0.62",
+  "build": 162,
+  "notes": "Move fan control to a dedicated helper-backed path and group thermal sensors into clearer categories.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.62/TaskManagerPro-1.0.62-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.62/TaskManagerPro-1.0.62-intel.dmg"
 }
 JSON
 

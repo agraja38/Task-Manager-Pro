@@ -344,7 +344,8 @@ final class SMCReader {
                 return nil
             }
             let rawKey = key.code.toString()
-            return ThermalSensorSnapshot(key: rawKey, name: displayName(for: rawKey), valueC: value)
+            let name = displayName(for: rawKey)
+            return ThermalSensorSnapshot(key: rawKey, name: name, category: category(for: rawKey, name: name), valueC: value)
         }
     }
 
@@ -394,70 +395,6 @@ final class SMCReader {
         return max(0, Int(value.rounded()))
     }
 
-    func setMinimumFanSpeeds(_ speedsByFanIndex: [Int: Int]) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        try ensureOpen()
-
-        let fans = try readFans()
-        let fanByIndex = Dictionary(uniqueKeysWithValues: fans.map { ($0.index, $0) })
-        for (index, requestedRPM) in speedsByFanIndex.sorted(by: { $0.key < $1.key }) {
-            guard let fan = fanByIndex[index] else { continue }
-            let clampedRPM = max(fan.minRPM, min(requestedRPM, fan.maxRPM))
-            try writeNumericValue(clampedRPM, to: FourCharCode(fromString: "F\(index)Mn"))
-        }
-    }
-
-    private func writeData(_ bytes: [UInt8], for key: SMCKey) throws {
-        var input = SMCParamStruct()
-        input.key = key.code
-        input.data8 = SMCParamStruct.Selector.writeKey.rawValue
-        input.keyInfo.dataSize = key.info.size
-
-        var paddedBytes = Array(bytes.prefix(Int(key.info.size)))
-        if paddedBytes.count < Int(key.info.size) {
-            paddedBytes.append(contentsOf: repeatElement(0, count: Int(key.info.size) - paddedBytes.count))
-        }
-
-        withUnsafeMutableBytes(of: &input.bytes) { rawBuffer in
-            let destination = rawBuffer.bindMemory(to: UInt8.self)
-            for (offset, byte) in paddedBytes.enumerated() {
-                destination[offset] = byte
-            }
-        }
-
-        _ = try callDriver(&input)
-    }
-
-    private func writeNumericValue(_ value: Int, to code: FourCharCode) throws {
-        let info = try keyInfo(for: code)
-        let key = SMCKey(code: code, info: info)
-
-        switch info {
-        case .fpe2:
-            let scaled = max(0, Int(round(Double(value) * 4.0)))
-            try writeData([
-                UInt8((scaled >> 6) & 0xff),
-                UInt8((scaled << 2) & 0xff)
-            ], for: key)
-        case .ui8:
-            try writeData([UInt8(max(0, min(value, 255)))], for: key)
-        case .ui16:
-            let clamped = UInt16(max(0, min(value, Int(UInt16.max))))
-            try writeData([UInt8((clamped >> 8) & 0xff), UInt8(clamped & 0xff)], for: key)
-        case .ui32:
-            let clamped = UInt32(max(0, value))
-            try writeData([
-                UInt8((clamped >> 24) & 0xff),
-                UInt8((clamped >> 16) & 0xff),
-                UInt8((clamped >> 8) & 0xff),
-                UInt8(clamped & 0xff)
-            ], for: key)
-        default:
-            throw SMCReaderError.unsupportedDataType(info.code.toString())
-        }
-    }
-
     private func decodeNumericValue(for key: SMCKey) throws -> Double {
         let data = try readData(for: key)
 
@@ -505,7 +442,7 @@ final class SMCReader {
         func appendExact(_ candidates: [String], as name: String) {
             for key in candidates {
                 if let sensor = remainingByKey.removeValue(forKey: key) {
-                    curated.append(ThermalSensorSnapshot(key: sensor.key, name: name, valueC: sensor.valueC))
+                    curated.append(ThermalSensorSnapshot(key: sensor.key, name: name, category: sensor.category, valueC: sensor.valueC))
                     return
                 }
             }
@@ -520,7 +457,7 @@ final class SMCReader {
 
             for (index, sensor) in matches.enumerated() {
                 remainingByKey.removeValue(forKey: sensor.key)
-                curated.append(ThermalSensorSnapshot(key: sensor.key, name: "\(namePrefix) \(index + 1)", valueC: sensor.valueC))
+                curated.append(ThermalSensorSnapshot(key: sensor.key, name: "\(namePrefix) \(index + 1)", category: sensor.category, valueC: sensor.valueC))
             }
         }
 
@@ -545,11 +482,36 @@ final class SMCReader {
         }
 
         return sensors.sorted { lhs, rhs in
+            if lhs.category != rhs.category {
+                return lhs.category.sortOrder < rhs.category.sortOrder
+            }
             if lhs.name != rhs.name {
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
             return lhs.key < rhs.key
         }
+    }
+
+    private func category(for key: String, name: String) -> ThermalSensorCategory {
+        if name.contains("CPU") || key.hasPrefix("TC") || key.hasPrefix("TP") || key.hasPrefix("TR") || key.hasPrefix("Te") || key.hasPrefix("Tf") {
+            return .cpu
+        }
+        if name.contains("GPU") || key.hasPrefix("TG") || key.hasPrefix("Tg") {
+            return .gpu
+        }
+        if name.contains("Battery") || name.contains("Power") || key.hasPrefix("TM") || key.hasPrefix("TV") || key.hasPrefix("TB") {
+            return .power
+        }
+        if name.contains("Airport") || name.contains("Thunderbolt") || key.hasPrefix("TW") || key.hasPrefix("TH") {
+            return .connectivity
+        }
+        if name.contains("Trackpad") || name.contains("Palm Rest") || key.hasPrefix("Ta") || key.hasPrefix("TS") {
+            return .input
+        }
+        if name.contains("SSD") || key == "Ts0S" {
+            return .storage
+        }
+        return .other
     }
 
     private func numericSuffix(for key: String, after prefix: String) -> Int {

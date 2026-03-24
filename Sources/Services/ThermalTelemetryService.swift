@@ -6,8 +6,4 @@ final class ThermalTelemetryService {
     func sample(currentThermalLevel: String) -> ThermalDetailsSnapshot {
         reader.sample(currentThermalLevel: currentThermalLevel)
     }
-
-    func applyMinimumFanSpeeds(_ speedsByFanIndex: [Int: Int]) throws {
-        try reader.setMinimumFanSpeeds(speedsByFanIndex)
-    }
 }

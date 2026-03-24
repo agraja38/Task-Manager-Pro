@@ -1,7 +1,7 @@
 {
-  "version": "1.0.61",
-  "build": 161,
-  "notes": "Reintroduce fan presets on a simpler minimum-speed write path and tighten the thermal sensor selection to avoid misleading readings.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.61/TaskManagerPro-1.0.61-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.61/TaskManagerPro-1.0.61-intel.dmg"
+  "version": "1.0.62",
+  "build": 162,
+  "notes": "Move fan control to a dedicated helper-backed path and group thermal sensors into clearer categories.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.62/TaskManagerPro-1.0.62-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.62/TaskManagerPro-1.0.62-intel.dmg"
 }

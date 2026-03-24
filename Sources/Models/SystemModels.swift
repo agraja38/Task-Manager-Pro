@@ -208,7 +208,32 @@ struct ThermalSensorSnapshot: Identifiable, Hashable {
     var id: String { key }
     let key: String
     let name: String
+    let category: ThermalSensorCategory
     let valueC: Double
+}
+
+enum ThermalSensorCategory: String, CaseIterable, Identifiable {
+    case cpu = "CPU"
+    case gpu = "GPU"
+    case power = "Power"
+    case connectivity = "Connectivity"
+    case input = "Input"
+    case storage = "Storage"
+    case other = "Other"
+
+    var id: String { rawValue }
+
+    var sortOrder: Int {
+        switch self {
+        case .cpu: 0
+        case .gpu: 1
+        case .power: 2
+        case .connectivity: 3
+        case .input: 4
+        case .storage: 5
+        case .other: 6
+        }
+    }
 }
 
 struct FanSpeedSnapshot: Identifiable, Hashable {

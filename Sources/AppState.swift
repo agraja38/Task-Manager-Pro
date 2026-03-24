@@ -95,6 +95,7 @@ final class AppState: ObservableObject {
     private let metricsService = SystemMetricsService()
     private let memoryCleanupService = MemoryCleanupService()
     private let thermalService = ThermalTelemetryService()
+    private let fanControlService = FanControlService()
     private var timer: Timer?
 
     private init() {
@@ -258,12 +259,10 @@ final class AppState: ObservableObject {
             return (fan.index, max(fan.minRPM, min(requested, fan.maxRPM)))
         })
 
-        do {
-            try thermalService.applyMinimumFanSpeeds(speedsByIndex)
-            latestError = "Applied fan minimum speeds."
+        let result = fanControlService.applyFanTargets(speedsByIndex)
+        latestError = result.message
+        if result.success {
             refreshAll()
-        } catch {
-            latestError = "Task Manager Pro could not apply fan control: \(error.localizedDescription)"
         }
     }
 
