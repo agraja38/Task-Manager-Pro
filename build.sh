@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.68"
-BUILD_NUMBER="168"
+VERSION="1.0.69"
+BUILD_NUMBER="169"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -109,11 +109,11 @@ xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.68",
-  "build": 168,
-  "notes": "Fix the fan menu bar animation, stop single-line overlap, and keep RPM and temperature live in both menu bar layouts.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.68/TaskManagerPro-1.0.68-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.68/TaskManagerPro-1.0.68-intel.dmg"
+  "version": "1.0.69",
+  "build": 169,
+  "notes": "Keep menu bar telemetry updating while menus are open and add more breathing room for the fan controller item.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.69/TaskManagerPro-1.0.69-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.69/TaskManagerPro-1.0.69-intel.dmg"
 }
 JSON
 

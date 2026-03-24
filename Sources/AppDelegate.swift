@@ -165,7 +165,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let button = fanStatusItem?.button, let fan = AppState.shared.selectedFanForMenu() else {
             fanStatusItem?.button?.title = ""
             fanStatusItem?.button?.image = nil
+            fanStatusItem?.button?.attributedTitle = NSAttributedString(string: "")
             removeFanStatusView()
+            stopFanAnimation()
             return
         }
 
@@ -174,9 +176,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let rpmText = "\(fan.rpm) rpm"
         let displayMode = AppState.shared.fanMenuDisplayMode
 
-        button.title = ""
-        button.image = nil
-        installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode, isSpinning: fan.rpm > 0)
+        if displayMode == .singleLine {
+            removeFanStatusView()
+            button.imagePosition = .imageLeading
+            button.attributedTitle = NSAttributedString(
+                string: "\(rpmText) / \(temperatureText)",
+                attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)]
+            )
+
+            let textWidth = (button.attributedTitle.string as NSString).size(withAttributes: [
+                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+            ]).width
+            fanStatusItem?.length = ceil(textWidth) + 40
+        } else {
+            button.title = ""
+            button.attributedTitle = NSAttributedString(string: "")
+            button.image = nil
+            installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode)
+        }
+
+        if fan.rpm > 0 {
+            startFanAnimation()
+        } else {
+            stopFanAnimation()
+        }
+        renderFanAnimationFrame()
     }
 
     @objc private func openMainWindow() {
@@ -267,7 +291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         twoLineStatusView = nil
     }
 
-    private func installFanStatusView(in button: NSStatusBarButton, rpmText: String, temperatureText: String, displayMode: FanMenuDisplayMode, isSpinning: Bool) {
+    private func installFanStatusView(in button: NSStatusBarButton, rpmText: String, temperatureText: String, displayMode: FanMenuDisplayMode) {
         let container: NSStackView
         let iconView: NSImageView
         let singleLabel: NSTextField
@@ -362,25 +386,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         singleLabel.stringValue = "\(rpmText) / \(temperatureText)"
         topLabel.stringValue = rpmText
         bottomLabel.stringValue = temperatureText
-        singleLabel.isHidden = displayMode != .singleLine
+        singleLabel.isHidden = true
         verticalStack.isHidden = displayMode != .twoLine
         container.isHidden = false
         container.layoutSubtreeIfNeeded()
 
-        let textAttributes: [NSAttributedString.Key: Any] = [
-            .font: singleLabel.font ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
-        ]
-        let singleLineWidth = (singleLabel.stringValue as NSString).size(withAttributes: textAttributes).width
         let topWidth = (topLabel.stringValue as NSString).size(withAttributes: [.font: topLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
         let bottomWidth = (bottomLabel.stringValue as NSString).size(withAttributes: [.font: bottomLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
-        let textWidth = displayMode == .singleLine ? singleLineWidth : max(topWidth, bottomWidth)
-        fanStatusItem?.length = ceil(textWidth) + 34
-
-        if isSpinning {
-            startFanAnimation(on: iconView)
-        } else {
-            stopFanAnimation(on: iconView)
-        }
+        let textWidth = max(topWidth, bottomWidth)
+        fanStatusItem?.length = ceil(textWidth) + 30
     }
 
     private func removeFanStatusView() {
@@ -394,27 +408,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         stopFanAnimation()
     }
 
-    private func startFanAnimation(on imageView: NSImageView) {
+    private func startFanAnimation() {
         guard fanAnimationTimer == nil else { return }
-        if let firstFrame = fanAnimationFrames.first {
-            imageView.image = firstFrame
+        let animationTimer = Timer(timeInterval: 0.12, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.fanAnimationFrameIndex = (self.fanAnimationFrameIndex + 1) % max(self.fanAnimationFrames.count, 1)
+                self.renderFanAnimationFrame()
+            }
         }
-        fanAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { [weak self, weak imageView] _ in
-            guard let self, let imageView else { return }
-            self.fanAnimationFrameIndex = (self.fanAnimationFrameIndex + 1) % max(self.fanAnimationFrames.count, 1)
-            imageView.image = self.fanAnimationFrames[self.fanAnimationFrameIndex]
+        RunLoop.main.add(animationTimer, forMode: .common)
+        fanAnimationTimer = animationTimer
+    }
+
+    private func renderFanAnimationFrame() {
+        let image = currentFanAnimationImage()
+        if AppState.shared.fanMenuDisplayMode == .singleLine {
+            fanStatusItem?.button?.image = image
+            fanStatusItem?.button?.imagePosition = .imageLeading
+        } else {
+            fanStatusIconView?.image = image
         }
     }
 
-    private func stopFanAnimation(on imageView: NSImageView) {
-        stopFanAnimation()
-        imageView.image = fanIdleImage
+    private func currentFanAnimationImage() -> NSImage? {
+        guard !fanAnimationFrames.isEmpty else { return fanIdleImage }
+        return fanAnimationTimer == nil ? fanIdleImage : fanAnimationFrames[fanAnimationFrameIndex]
     }
 
     private func stopFanAnimation() {
         fanAnimationTimer?.invalidate()
         fanAnimationTimer = nil
         fanAnimationFrameIndex = 0
+        renderFanAnimationFrame()
     }
 
     private static func makeFanAnimationFrames() -> [NSImage] {

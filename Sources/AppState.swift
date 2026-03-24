@@ -362,11 +362,13 @@ final class AppState: ObservableObject {
 
     private func startTimers() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+        let refreshTimer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refreshAll()
             }
         }
+        RunLoop.main.add(refreshTimer, forMode: .common)
+        timer = refreshTimer
     }
 
     private func runningAppMetadataByPID() -> [Int32: RunningAppMetadata] {
