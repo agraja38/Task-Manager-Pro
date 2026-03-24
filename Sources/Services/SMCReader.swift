@@ -1,5 +1,6 @@
 import Foundation
 import IOKit
+import Darwin
 
 // Adapted from the public AppleSMC client struct layout documented in SMCKit
 // (MIT) and the fan/temperature key usage patterns used by smcFanControl.
@@ -151,6 +152,12 @@ private extension Double {
 }
 
 final class SMCReader {
+    private struct CPUTopology {
+        let totalCores: Int?
+        let performanceCores: Int?
+        let efficiencyCores: Int?
+    }
+
     private static let cpuPriorityKeys = [
         "TCMz", "Te06", "Te0T", "TCMb", "Te05", "Te0S", "TCHP",
         "TfC0", "TfC1", "TfC2", "TfC3", "TfC4",
@@ -169,6 +176,7 @@ final class SMCReader {
     private var keyInfoCache: [FourCharCode: SMCDataType] = [:]
     private var cachedTemperatureKeys: [SMCKey]?
     private var cachedFanCount: Int?
+    private lazy var cpuTopology = loadCPUTopology()
 
     deinit {
         close()
@@ -438,26 +446,57 @@ final class SMCReader {
         let exactByKey = Dictionary(uniqueKeysWithValues: sensors.map { ($0.key, $0) })
         var remainingByKey = exactByKey
         var curated: [ThermalSensorSnapshot] = []
+        var seenNames = Set<String>()
 
         func appendExact(_ candidates: [String], as name: String) {
             for key in candidates {
                 if let sensor = remainingByKey.removeValue(forKey: key) {
+                    guard seenNames.insert(name).inserted else { return }
                     curated.append(ThermalSensorSnapshot(key: sensor.key, name: name, category: sensor.category, valueC: sensor.valueC))
                     return
                 }
             }
         }
 
-        func appendSeries(prefix: String, namePrefix: String) {
+        func appendSeries(prefix: String, namePrefix: String, maxCount: Int? = nil) {
             let matches = remainingByKey.values
-                .filter { $0.key.hasPrefix(prefix) }
+                .filter { sensor in
+                    guard sensor.key.hasPrefix(prefix) else { return false }
+                    let suffix = String(sensor.key.dropFirst(prefix.count))
+                    return suffix.count == 1 && suffix.range(of: "^[0-9A-Fa-f]$", options: .regularExpression) != nil
+                }
                 .sorted { lhs, rhs in
                     numericSuffix(for: lhs.key, after: prefix) < numericSuffix(for: rhs.key, after: prefix)
                 }
 
             for (index, sensor) in matches.enumerated() {
+                if let maxCount, index >= maxCount { break }
                 remainingByKey.removeValue(forKey: sensor.key)
-                curated.append(ThermalSensorSnapshot(key: sensor.key, name: "\(namePrefix) \(index + 1)", category: sensor.category, valueC: sensor.valueC))
+                let name = "\(namePrefix) \(index + 1)"
+                guard seenNames.insert(name).inserted else { continue }
+                curated.append(ThermalSensorSnapshot(key: sensor.key, name: name, category: sensor.category, valueC: sensor.valueC))
+            }
+        }
+
+        func appendRemaining(category: ThermalSensorCategory, preferredPrefixes: [String] = []) {
+            let matches = remainingByKey.values
+                .filter { $0.category == category }
+                .sorted { lhs, rhs in
+                    let lhsPrefixScore = preferredPrefixes.firstIndex(where: { lhs.key.hasPrefix($0) }) ?? preferredPrefixes.count
+                    let rhsPrefixScore = preferredPrefixes.firstIndex(where: { rhs.key.hasPrefix($0) }) ?? preferredPrefixes.count
+                    if lhsPrefixScore != rhsPrefixScore {
+                        return lhsPrefixScore < rhsPrefixScore
+                    }
+                    if lhs.name != rhs.name {
+                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                    }
+                    return lhs.key < rhs.key
+                }
+
+            for sensor in matches {
+                remainingByKey.removeValue(forKey: sensor.key)
+                guard seenNames.insert(sensor.name).inserted else { continue }
+                curated.append(sensor)
             }
         }
 
@@ -465,10 +504,18 @@ final class SMCReader {
         appendExact(["TB1T"], as: "Battery")
         appendExact(["TB2T"], as: "Battery Gas Gauge")
         appendExact(["TCMA", "TC0C", "TC0F"], as: "CPU Core Average")
-        appendSeries(prefix: "TRD", namePrefix: "CPU Efficiency Core")
-        appendSeries(prefix: "TPD", namePrefix: "CPU Performance Core")
+        appendSeries(prefix: "TRD", namePrefix: "CPU Efficiency Core", maxCount: cpuTopology.efficiencyCores)
+        appendSeries(prefix: "TPD", namePrefix: "CPU Performance Core", maxCount: cpuTopology.performanceCores)
         appendSeries(prefix: "TGC", namePrefix: "GPU Cluster")
         appendExact(["Tg0A", "TG0A", "TGAA"], as: "GPU Cluster Average")
+        appendExact(["Tg0d", "TG0D"], as: "GPU Die")
+        appendExact(["Tg0K"], as: "GPU Core")
+        appendExact(["Tg0L"], as: "GPU Logic")
+        appendExact(["Tg0S"], as: "GPU Shader Cluster")
+        appendExact(["Tg0R"], as: "GPU Regulator")
+        appendExact(["Tg0X"], as: "GPU Max")
+        appendExact(["Tg0Y"], as: "GPU Cluster Peak")
+        appendExact(["TG0P"], as: "GPU Proximity")
         appendExact(["TM0P"], as: "Power Manager Die Average")
         appendExact(["TV0P"], as: "Power Supply Proximity")
         appendExact(["TH0P"], as: "Thunderbolt Left Proximity")
@@ -477,6 +524,8 @@ final class SMCReader {
         appendExact(["TaPT", "TaLT", "TaRT", "TaTP"], as: "Trackpad")
         appendExact(["TaPA"], as: "Trackpad Actuator")
         appendExact(["Ts0S"], as: "APPLE SSD AP1024Z")
+        appendRemaining(category: .gpu, preferredPrefixes: ["Tg", "TG", "TGC"])
+        appendRemaining(category: .input, preferredPrefixes: ["TS", "Ta"])
 
         if !curated.isEmpty {
             return curated
@@ -675,5 +724,23 @@ final class SMCReader {
             "TVxx": "Voltage Regulator Max",
             "TVms": "Voltage Regulator Memory Sensor"
         ]
+    }
+
+    private func loadCPUTopology() -> CPUTopology {
+        CPUTopology(
+            totalCores: sysctlInt("hw.physicalcpu"),
+            performanceCores: sysctlInt("hw.perflevel0.physicalcpu"),
+            efficiencyCores: sysctlInt("hw.perflevel1.physicalcpu")
+        )
+    }
+
+    private func sysctlInt(_ name: String) -> Int? {
+        var value: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        let result = name.withCString { key in
+            sysctlbyname(key, &value, &size, nil, 0)
+        }
+        guard result == 0 else { return nil }
+        return Int(value)
     }
 }
