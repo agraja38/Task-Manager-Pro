@@ -6,6 +6,7 @@ final class AppState: ObservableObject {
     static let shared = AppState()
     private static let hasSeenMemoryCleanupWarningKey = "hasSeenMemoryCleanupWarning"
     private static let appModeKey = "appMode"
+    private static let fanPresetsKey = "fanPresets"
 
     @Published var selectedSection: TopSection = .processes
     @Published var cpuGraphMode: CPUGraphMode = UserDefaults.standard.string(forKey: "cpuGraphMode").flatMap(CPUGraphMode.init(rawValue:)) ?? .overall {
@@ -80,6 +81,13 @@ final class AppState: ObservableObject {
             NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil, userInfo: ["mode": menuBarDisplayMode.rawValue])
         }
     }
+    @Published var fanPresets: [FanPreset] = AppState.loadFanPresets() {
+        didSet {
+            persistFanPresets()
+            NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil, userInfo: ["mode": menuBarDisplayMode.rawValue])
+        }
+    }
+    @Published var manualFanMinimumsRPM: [Int] = []
 
     let updater = UpdaterService()
 
@@ -146,6 +154,7 @@ final class AppState: ObservableObject {
                 }
                 if let thermalDetails {
                     self.currentThermalDetails = thermalDetails
+                    self.syncManualFanMinimums(with: thermalDetails.fanSpeedsRPM)
                 }
                 self.appendHistory(snapshot: metrics, processes: processes)
                 if processes.isEmpty {
@@ -229,6 +238,69 @@ final class AppState: ObservableObject {
 
     func clearCache() {
         clearMemory()
+    }
+
+    func setManualFanMinimum(_ rpm: Int, at index: Int) {
+        guard manualFanMinimumsRPM.indices.contains(index) else { return }
+        let fans = currentThermalDetails.fanSpeedsRPM
+        guard fans.indices.contains(index) else { return }
+        let fan = fans[index]
+        manualFanMinimumsRPM[index] = max(fan.minRPM, min(rpm, fan.maxRPM))
+    }
+
+    func applyCurrentFanControl() {
+        guard showsAdvancedTelemetryWidgets else { return }
+        let fans = currentThermalDetails.fanSpeedsRPM
+        guard !fans.isEmpty else { return }
+
+        let speedsByIndex = Dictionary(uniqueKeysWithValues: fans.map { fan in
+            let requested = manualFanMinimumsRPM.indices.contains(fan.index) ? manualFanMinimumsRPM[fan.index] : fan.minRPM
+            return (fan.index, max(fan.minRPM, min(requested, fan.maxRPM)))
+        })
+
+        do {
+            try thermalService.applyMinimumFanSpeeds(speedsByIndex)
+            latestError = "Applied fan minimum speeds."
+            refreshAll()
+        } catch {
+            latestError = "Task Manager Pro could not apply fan control: \(error.localizedDescription)"
+        }
+    }
+
+    func saveCurrentFanPreset(named name: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            latestError = "Give the preset a name first."
+            return
+        }
+
+        let speeds = currentThermalDetails.fanSpeedsRPM.map { fan in
+            manualFanMinimumsRPM.indices.contains(fan.index) ? manualFanMinimumsRPM[fan.index] : fan.minRPM
+        }
+        guard !speeds.isEmpty else {
+            latestError = "Fan presets are only available when Task Manager Pro can read the fans on this Mac."
+            return
+        }
+
+        if let existingIndex = fanPresets.firstIndex(where: { $0.name.caseInsensitiveCompare(trimmedName) == .orderedSame }) {
+            fanPresets[existingIndex].minimumSpeedsRPM = speeds
+        } else {
+            fanPresets.append(FanPreset(id: UUID(), name: trimmedName, minimumSpeedsRPM: speeds))
+            fanPresets.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+
+        latestError = "Saved fan preset \(trimmedName)."
+    }
+
+    func applyFanPreset(_ preset: FanPreset) {
+        guard !preset.minimumSpeedsRPM.isEmpty else { return }
+        manualFanMinimumsRPM = preset.minimumSpeedsRPM
+        applyCurrentFanControl()
+    }
+
+    func deleteFanPreset(_ preset: FanPreset) {
+        fanPresets.removeAll { $0.id == preset.id }
+        latestError = "Deleted fan preset \(preset.name)."
     }
 
     func handleSystemWake() {
@@ -322,6 +394,32 @@ final class AppState: ObservableObject {
         case .dark:
             NSApp.appearance = NSAppearance(named: .darkAqua)
         }
+    }
+
+    private func syncManualFanMinimums(with fans: [FanSpeedSnapshot]) {
+        guard !fans.isEmpty else {
+            manualFanMinimumsRPM = []
+            return
+        }
+
+        if manualFanMinimumsRPM.count != fans.count {
+            manualFanMinimumsRPM = fans.map(\.minRPM)
+        }
+    }
+
+    private static func loadFanPresets() -> [FanPreset] {
+        guard
+            let data = UserDefaults.standard.data(forKey: fanPresetsKey),
+            let presets = try? JSONDecoder().decode([FanPreset].self, from: data)
+        else {
+            return []
+        }
+        return presets.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func persistFanPresets() {
+        guard let data = try? JSONEncoder().encode(fanPresets) else { return }
+        UserDefaults.standard.set(data, forKey: Self.fanPresetsKey)
     }
 
     private func appendHistory(snapshot: PerformanceSnapshot, processes: [ProcessSnapshot]) {

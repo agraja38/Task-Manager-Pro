@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.60"
-BUILD_NUMBER="160"
+VERSION="1.0.61"
+BUILD_NUMBER="161"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -97,11 +97,11 @@ fi
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.60",
-  "build": 160,
-  "notes": "Align the Thermals tab sensor naming and ordering more closely with the requested monitoring table.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.60/TaskManagerPro-1.0.60-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.60/TaskManagerPro-1.0.60-intel.dmg"
+  "version": "1.0.61",
+  "build": 161,
+  "notes": "Reintroduce fan presets on a simpler minimum-speed write path and tighten the thermal sensor selection to avoid misleading readings.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.61/TaskManagerPro-1.0.61-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.61/TaskManagerPro-1.0.61-intel.dmg"
 }
 JSON
 

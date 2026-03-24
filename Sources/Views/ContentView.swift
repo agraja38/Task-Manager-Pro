@@ -579,6 +579,7 @@ struct NetworkView: View {
 struct ThermalsView: View {
     @EnvironmentObject private var appState: AppState
     @State private var spinsFan = false
+    @State private var presetName = ""
 
     private var combinedFanRPM: Int {
         appState.currentThermalDetails.fanSpeedsRPM.reduce(0) { $0 + $1.rpm }
@@ -614,6 +615,60 @@ struct ThermalsView: View {
                         DetailRow(label: "Thermal State", value: appState.currentThermalDetails.thermalLevel)
                         DetailRow(label: "Sensor Source", value: appState.currentThermalDetails.hottestSensors.isEmpty && appState.currentThermalDetails.fanSpeedsRPM.isEmpty ? "Unavailable" : "AppleSMC")
                         DetailRow(label: "Last Sample", value: appState.currentThermalDetails.capturedAt == .distantPast ? "Not sampled yet" : DateFormatter.localizedString(from: appState.currentThermalDetails.capturedAt, dateStyle: .none, timeStyle: .medium))
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                GroupBox("Fan Control") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        if appState.currentThermalDetails.fanSpeedsRPM.isEmpty {
+                            Text("Manual fan control appears here when Task Manager Pro can read the fans on this Mac.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(appState.currentThermalDetails.fanSpeedsRPM) { fan in
+                                fanControlRow(fan)
+                            }
+
+                            HStack(spacing: 10) {
+                                Button("Apply") {
+                                    appState.applyCurrentFanControl()
+                                }
+                                .buttonStyle(.borderedProminent)
+
+                                Spacer()
+                            }
+
+                            Divider()
+
+                            HStack(spacing: 10) {
+                                TextField("Preset name", text: $presetName)
+                                    .textFieldStyle(.roundedBorder)
+                                Button("Save Preset") {
+                                    appState.saveCurrentFanPreset(named: presetName)
+                                    presetName = ""
+                                }
+                                .disabled(presetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
+
+                            if !appState.fanPresets.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Presets")
+                                        .font(.headline)
+                                    ForEach(appState.fanPresets) { preset in
+                                        HStack {
+                                            Text(preset.name)
+                                            Spacer()
+                                            Button("Apply") {
+                                                appState.applyFanPreset(preset)
+                                            }
+                                            Button("Delete", role: .destructive) {
+                                                appState.deleteFanPreset(preset)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     .padding(.vertical, 8)
                 }
@@ -715,6 +770,59 @@ struct ThermalsView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    @ViewBuilder
+    private func fanControlRow(_ fan: FanSpeedSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(fan.name)
+                    .font(.headline)
+                Spacer()
+                Text("Min \(fan.minRPM) • Max \(fan.maxRPM)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 12) {
+                Slider(
+                    value: fanSliderBinding(for: fan),
+                    in: Double(fan.minRPM)...Double(fan.maxRPM),
+                    step: 50
+                )
+                TextField("RPM", value: fanTextBinding(for: fan), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 92)
+            }
+        }
+        .padding(12)
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+        )
+    }
+
+    private func fanSliderBinding(for fan: FanSpeedSnapshot) -> Binding<Double> {
+        Binding(
+            get: {
+                Double(appState.manualFanMinimumsRPM.indices.contains(fan.index) ? appState.manualFanMinimumsRPM[fan.index] : fan.minRPM)
+            },
+            set: { newValue in
+                appState.setManualFanMinimum(Int(newValue.rounded()), at: fan.index)
+            }
+        )
+    }
+
+    private func fanTextBinding(for fan: FanSpeedSnapshot) -> Binding<Int> {
+        Binding(
+            get: {
+                appState.manualFanMinimumsRPM.indices.contains(fan.index) ? appState.manualFanMinimumsRPM[fan.index] : fan.minRPM
+            },
+            set: { newValue in
+                appState.setManualFanMinimum(newValue, at: fan.index)
+            }
+        )
     }
 
     private var fanSpeedValue: String {

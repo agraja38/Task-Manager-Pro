@@ -34,6 +34,7 @@ private struct SMCParamStruct {
     enum Selector: UInt8 {
         case handleYPCEvent = 2
         case readKey = 5
+        case writeKey = 6
         case getKeyFromIndex = 8
         case getKeyInfo = 9
     }
@@ -393,6 +394,70 @@ final class SMCReader {
         return max(0, Int(value.rounded()))
     }
 
+    func setMinimumFanSpeeds(_ speedsByFanIndex: [Int: Int]) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        try ensureOpen()
+
+        let fans = try readFans()
+        let fanByIndex = Dictionary(uniqueKeysWithValues: fans.map { ($0.index, $0) })
+        for (index, requestedRPM) in speedsByFanIndex.sorted(by: { $0.key < $1.key }) {
+            guard let fan = fanByIndex[index] else { continue }
+            let clampedRPM = max(fan.minRPM, min(requestedRPM, fan.maxRPM))
+            try writeNumericValue(clampedRPM, to: FourCharCode(fromString: "F\(index)Mn"))
+        }
+    }
+
+    private func writeData(_ bytes: [UInt8], for key: SMCKey) throws {
+        var input = SMCParamStruct()
+        input.key = key.code
+        input.data8 = SMCParamStruct.Selector.writeKey.rawValue
+        input.keyInfo.dataSize = key.info.size
+
+        var paddedBytes = Array(bytes.prefix(Int(key.info.size)))
+        if paddedBytes.count < Int(key.info.size) {
+            paddedBytes.append(contentsOf: repeatElement(0, count: Int(key.info.size) - paddedBytes.count))
+        }
+
+        withUnsafeMutableBytes(of: &input.bytes) { rawBuffer in
+            let destination = rawBuffer.bindMemory(to: UInt8.self)
+            for (offset, byte) in paddedBytes.enumerated() {
+                destination[offset] = byte
+            }
+        }
+
+        _ = try callDriver(&input)
+    }
+
+    private func writeNumericValue(_ value: Int, to code: FourCharCode) throws {
+        let info = try keyInfo(for: code)
+        let key = SMCKey(code: code, info: info)
+
+        switch info {
+        case .fpe2:
+            let scaled = max(0, Int(round(Double(value) * 4.0)))
+            try writeData([
+                UInt8((scaled >> 6) & 0xff),
+                UInt8((scaled << 2) & 0xff)
+            ], for: key)
+        case .ui8:
+            try writeData([UInt8(max(0, min(value, 255)))], for: key)
+        case .ui16:
+            let clamped = UInt16(max(0, min(value, Int(UInt16.max))))
+            try writeData([UInt8((clamped >> 8) & 0xff), UInt8(clamped & 0xff)], for: key)
+        case .ui32:
+            let clamped = UInt32(max(0, value))
+            try writeData([
+                UInt8((clamped >> 24) & 0xff),
+                UInt8((clamped >> 16) & 0xff),
+                UInt8((clamped >> 8) & 0xff),
+                UInt8(clamped & 0xff)
+            ], for: key)
+        default:
+            throw SMCReaderError.unsupportedDataType(info.code.toString())
+        }
+    }
+
     private func decodeNumericValue(for key: SMCKey) throws -> Double {
         let data = try readData(for: key)
 
@@ -459,21 +524,21 @@ final class SMCReader {
             }
         }
 
-        appendExact(["TW0P", "TW1P", "TW0T"], as: "Airport Proximity")
-        appendExact(["TB1T", "TBAT"], as: "Battery")
-        appendExact(["TB2T", "TB0T"], as: "Battery Gas Gauge")
+        appendExact(["TW0P"], as: "Airport Proximity")
+        appendExact(["TB1T"], as: "Battery")
+        appendExact(["TB2T"], as: "Battery Gas Gauge")
         appendExact(["TCMA", "TC0C", "TC0F"], as: "CPU Core Average")
         appendSeries(prefix: "TRD", namePrefix: "CPU Efficiency Core")
         appendSeries(prefix: "TPD", namePrefix: "CPU Performance Core")
         appendSeries(prefix: "TGC", namePrefix: "GPU Cluster")
         appendExact(["Tg0A", "TG0A", "TGAA"], as: "GPU Cluster Average")
         appendExact(["TM0P"], as: "Power Manager Die Average")
-        appendExact(["TV0P", "Tp0P", "TVP0", "TVh0"], as: "Power Supply Proximity")
+        appendExact(["TV0P"], as: "Power Supply Proximity")
         appendExact(["TH0P"], as: "Thunderbolt Left Proximity")
         appendExact(["TH1P"], as: "Thunderbolt Right Proximity")
-        appendExact(["TaPT", "Ta0P"], as: "Trackpad")
-        appendExact(["TaPA", "Ta0A"], as: "Trackpad Actuator")
-        appendExact(["TH0T", "TH1T", "Ts0S"], as: "APPLE SSD AP1024Z")
+        appendExact(["TaPT"], as: "Trackpad")
+        appendExact(["TaPA"], as: "Trackpad Actuator")
+        appendExact(["Ts0S"], as: "APPLE SSD AP1024Z")
 
         if !curated.isEmpty {
             return curated
