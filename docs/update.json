@@ -1,7 +1,7 @@
 {
-  "version": "1.0.64",
-  "build": 164,
-  "notes": "Fix duplicate CPU core thermal rows and broaden the GPU sensor set in the Thermals tab.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.64/TaskManagerPro-1.0.64-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.64/TaskManagerPro-1.0.64-intel.dmg"
+  "version": "1.0.65",
+  "build": 165,
+  "notes": "Add a separate fan controller menu bar item with temperature selection, and move Auto, Full Blast, and presets into that fan menu.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.65/TaskManagerPro-1.0.65-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.65/TaskManagerPro-1.0.65-intel.dmg"
 }

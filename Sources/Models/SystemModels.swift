@@ -27,6 +27,15 @@ enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum FanMenuTemperatureSource: String, CaseIterable, Identifiable {
+    case cpuAverage = "CPU Avg"
+    case gpuAverage = "GPU Avg"
+    case palmRest = "Palm Rest"
+    case trackpad = "Trackpad"
+
+    var id: String { rawValue }
+}
+
 enum AppearanceMode: String, CaseIterable, Identifiable {
     case system = "Use System"
     case light = "Light"

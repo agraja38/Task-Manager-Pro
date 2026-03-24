@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
+    private var fanStatusItem: NSStatusItem?
     private var twoLineStatusView: NSStackView?
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
@@ -55,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         latestCPUPercent = notification.userInfo?["cpuPercent"] as? Double ?? 0
         latestMemoryPercent = notification.userInfo?["memoryPercent"] as? Double ?? 0
         updateStatusItemDisplay()
+        updateFanStatusItemDisplay()
     }
 
     @objc private func handleMenuBarPreferenceChange(_ notification: Notification) {
@@ -86,24 +88,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func applyMenuBarMode() {
         let mode = UserDefaults.standard.string(forKey: "menuBarDisplayMode").flatMap(MenuBarDisplayMode.init(rawValue:)) ?? .compact
+        let showsFanController = UserDefaults.standard.object(forKey: "showsFanControllerMenuBarItem") as? Bool ?? false
 
         if mode == .off {
             if let statusItem {
                 NSStatusBar.system.removeStatusItem(statusItem)
             }
             statusItem = nil
-            return
+        } else {
+            if statusItem == nil {
+                let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+                item.button?.font = .monospacedSystemFont(ofSize: 11, weight: .medium)
+                item.menu = NSMenu()
+                statusItem = item
+            }
+
+            rebuildStatusMenu()
+            updateStatusItemDisplay()
         }
 
-        if statusItem == nil {
-            let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-            item.button?.font = .monospacedSystemFont(ofSize: 11, weight: .medium)
-            item.menu = NSMenu()
-            statusItem = item
+        if showsFanController && AppState.shared.showsAdvancedTelemetryWidgets {
+            if fanStatusItem == nil {
+                let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+                item.button?.font = .monospacedSystemFont(ofSize: 11, weight: .medium)
+                item.menu = NSMenu()
+                fanStatusItem = item
+            }
+            rebuildFanStatusMenu()
+            updateFanStatusItemDisplay()
+        } else if let fanStatusItem {
+            NSStatusBar.system.removeStatusItem(fanStatusItem)
+            self.fanStatusItem = nil
         }
-
-        rebuildStatusMenu()
-        updateStatusItemDisplay()
     }
 
     private func updateStatusItemDisplay() {
@@ -130,6 +146,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case .off:
             break
         }
+    }
+
+    private func updateFanStatusItemDisplay() {
+        guard let button = fanStatusItem?.button, let fan = AppState.shared.currentThermalDetails.fanSpeedsRPM.first else {
+            fanStatusItem?.button?.title = ""
+            fanStatusItem?.button?.image = nil
+            return
+        }
+
+        let tempDisplay = AppState.shared.fanMenuTemperatureDisplay()
+        let temperatureText: String
+        if let value = tempDisplay.value {
+            temperatureText = "\(tempDisplay.label) \(Int(value.rounded()))C"
+        } else {
+            temperatureText = "\(tempDisplay.label) --"
+        }
+
+        button.image = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
+        button.imagePosition = .imageLeading
+        button.title = "\(fan.rpm)rpm \(temperatureText)"
     }
 
     @objc private func openMainWindow() {
@@ -228,24 +264,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Clear Cache", action: #selector(clearMemory), keyEquivalent: "")
 
-        if AppState.shared.showsAdvancedTelemetryWidgets, !AppState.shared.fanPresets.isEmpty {
-            let presetsItem = NSMenuItem(title: "Fan Presets", action: nil, keyEquivalent: "")
-            let presetsMenu = NSMenu()
-
-            for preset in AppState.shared.fanPresets {
-                let item = NSMenuItem(title: preset.name, action: #selector(applyFanPresetFromMenu(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = preset.id.uuidString
-                presetsMenu.addItem(item)
-            }
-
-            presetsItem.submenu = presetsMenu
-            menu.addItem(presetsItem)
-        }
-
         menu.addItem(withTitle: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Quit Task Manager Pro", action: #selector(quitApp), keyEquivalent: "q")
+    }
+
+    private func rebuildFanStatusMenu() {
+        guard let menu = fanStatusItem?.menu else { return }
+        menu.removeAllItems()
+
+        menu.addItem(withTitle: "Open Fan Controls", action: #selector(openThermalsWindow), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+
+        let autoItem = NSMenuItem(title: "Auto", action: #selector(applyAutomaticFanControl), keyEquivalent: "")
+        autoItem.target = self
+        menu.addItem(autoItem)
+
+        let fullBlastItem = NSMenuItem(title: "Full Blast", action: #selector(applyFullBlastFanControl), keyEquivalent: "")
+        fullBlastItem.target = self
+        menu.addItem(fullBlastItem)
+
+        for preset in AppState.shared.fanPresets {
+            let item = NSMenuItem(title: preset.name, action: #selector(applyFanPresetFromMenu(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = preset.id.uuidString
+            menu.addItem(item)
+        }
     }
 
     @objc private func applyFanPresetFromMenu(_ sender: NSMenuItem) {
@@ -258,6 +302,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         AppState.shared.applyFanPreset(preset)
+    }
+
+    @objc private func openThermalsWindow() {
+        AppState.shared.selectedSection = .thermals
+        openMainWindow()
+    }
+
+    @objc private func applyAutomaticFanControl() {
+        AppState.shared.setAutomaticFanControl()
+    }
+
+    @objc private func applyFullBlastFanControl() {
+        AppState.shared.setFullBlastFanControl()
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {

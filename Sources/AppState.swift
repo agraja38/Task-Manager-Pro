@@ -57,6 +57,18 @@ final class AppState: ObservableObject {
             NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil, userInfo: ["mode": menuBarDisplayMode.rawValue])
         }
     }
+    @Published var showsFanControllerMenuBarItem: Bool = UserDefaults.standard.object(forKey: "showsFanControllerMenuBarItem") as? Bool ?? false {
+        didSet {
+            UserDefaults.standard.set(showsFanControllerMenuBarItem, forKey: "showsFanControllerMenuBarItem")
+            NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil)
+        }
+    }
+    @Published var fanMenuTemperatureSource: FanMenuTemperatureSource = UserDefaults.standard.string(forKey: "fanMenuTemperatureSource").flatMap(FanMenuTemperatureSource.init(rawValue:)) ?? .cpuAverage {
+        didSet {
+            UserDefaults.standard.set(fanMenuTemperatureSource.rawValue, forKey: "fanMenuTemperatureSource")
+            NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil)
+        }
+    }
     @Published var appearanceMode: AppearanceMode = UserDefaults.standard.string(forKey: "appearanceMode").flatMap(AppearanceMode.init(rawValue:)) ?? .system {
         didSet {
             UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode")
@@ -279,6 +291,15 @@ final class AppState: ObservableObject {
         }
     }
 
+    func setFullBlastFanControl() {
+        guard showsAdvancedTelemetryWidgets else { return }
+        let fans = currentThermalDetails.fanSpeedsRPM
+        guard !fans.isEmpty else { return }
+
+        manualFanMinimumsRPM = fans.map(\.maxRPM)
+        applyCurrentFanControl()
+    }
+
     func saveCurrentFanPreset(named name: String) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
@@ -416,6 +437,23 @@ final class AppState: ObservableObject {
 
         if manualFanMinimumsRPM.count != fans.count {
             manualFanMinimumsRPM = fans.map(\.minRPM)
+        }
+    }
+
+    func fanMenuTemperatureDisplay() -> (label: String, value: Double?) {
+        switch fanMenuTemperatureSource {
+        case .cpuAverage:
+            let cpuAverage = currentThermalDetails.hottestSensors.first(where: { $0.name == "CPU Core Average" })?.valueC
+            return ("CPU", cpuAverage ?? currentThermalDetails.cpuTemperatureC)
+        case .gpuAverage:
+            let gpuAverage = currentThermalDetails.hottestSensors.first(where: { $0.name == "GPU Cluster Average" })?.valueC
+            return ("GPU", gpuAverage ?? currentThermalDetails.gpuTemperatureC)
+        case .palmRest:
+            let palmRest = currentThermalDetails.hottestSensors.first(where: { $0.name.contains("Palm Rest") })?.valueC
+            return ("Palm", palmRest ?? currentThermalDetails.palmRestTemperatureC)
+        case .trackpad:
+            let trackpad = currentThermalDetails.hottestSensors.first(where: { $0.name == "Trackpad" || $0.name.contains("Trackpad") })?.valueC
+            return ("Track", trackpad)
         }
     }
 

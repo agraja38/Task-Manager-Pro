@@ -1069,6 +1069,16 @@ struct SettingsView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+
+                        if appState.showsAdvancedTelemetryWidgets {
+                            Toggle("Show fan controller in menu bar", isOn: $appState.showsFanControllerMenuBarItem)
+
+                            Picker("Fan menu temperature", selection: $appState.fanMenuTemperatureSource) {
+                                ForEach(FanMenuTemperatureSource.allCases) { source in
+                                    Text(source.rawValue).tag(source)
+                                }
+                            }
+                        }
                     }
                     .padding(.vertical, 8)
                 }

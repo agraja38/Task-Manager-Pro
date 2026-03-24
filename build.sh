@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.64"
-BUILD_NUMBER="164"
+VERSION="1.0.65"
+BUILD_NUMBER="165"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -107,11 +107,11 @@ xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.64",
-  "build": 164,
-  "notes": "Fix duplicate CPU core thermal rows and broaden the GPU sensor set in the Thermals tab.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.64/TaskManagerPro-1.0.64-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.64/TaskManagerPro-1.0.64-intel.dmg"
+  "version": "1.0.65",
+  "build": 165,
+  "notes": "Add a separate fan controller menu bar item with temperature selection, and move Auto, Full Blast, and presets into that fan menu.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.65/TaskManagerPro-1.0.65-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.65/TaskManagerPro-1.0.65-intel.dmg"
 }
 JSON
 
