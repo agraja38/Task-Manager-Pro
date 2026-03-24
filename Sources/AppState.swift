@@ -162,7 +162,7 @@ final class AppState: ObservableObject {
         let metricsService = self.metricsService
         let thermalService = self.thermalService
         let shouldCaptureNetworkDetails = self.showsAdvancedTelemetryWidgets && self.selectedSection == .network
-        let shouldCaptureThermalDetails = self.showsAdvancedTelemetryWidgets && self.selectedSection == .thermals
+        let shouldCaptureThermalDetails = self.showsAdvancedTelemetryWidgets && (self.selectedSection == .thermals || self.showsFanControllerMenuBarItem)
 
         Task.detached(priority: .userInitiated) {
             let rawProcesses = processService.fetchProcesses(appMetadataByPID: appMetadataByPID)

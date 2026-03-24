@@ -12,6 +12,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var fanStatusTopLabel: NSTextField?
     private var fanStatusBottomLabel: NSTextField?
     private var fanStatusVerticalStack: NSStackView?
+    private var fanAnimationTimer: Timer?
+    private var fanAnimationFrameIndex = 0
+    private lazy var fanAnimationFrames: [NSImage] = Self.makeFanAnimationFrames()
+    private lazy var fanIdleImage: NSImage? = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
     private weak var mainWindow: NSWindow?
@@ -127,6 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSStatusBar.system.removeStatusItem(fanStatusItem)
             self.fanStatusItem = nil
             removeFanStatusView()
+            stopFanAnimation()
         }
     }
 
@@ -286,10 +291,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             verticalStack = existingVerticalStack
         } else {
             let createdIcon = NSImageView()
-            createdIcon.image = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
+            createdIcon.image = fanIdleImage
             createdIcon.contentTintColor = .labelColor
+            createdIcon.imageScaling = .scaleProportionallyDown
             createdIcon.translatesAutoresizingMaskIntoConstraints = false
-            createdIcon.wantsLayer = true
             NSLayoutConstraint.activate([
                 createdIcon.widthAnchor.constraint(equalToConstant: 13),
                 createdIcon.heightAnchor.constraint(equalToConstant: 13)
@@ -333,10 +338,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             button.addSubview(created)
             NSLayoutConstraint.activate([
-                created.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+                created.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 2),
+                created.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -2),
                 created.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-                created.leadingAnchor.constraint(greaterThanOrEqualTo: button.leadingAnchor, constant: 0),
-                created.trailingAnchor.constraint(lessThanOrEqualTo: button.trailingAnchor, constant: 0)
+                created.heightAnchor.constraint(lessThanOrEqualTo: button.heightAnchor)
             ])
 
             fanStatusView = created
@@ -360,6 +365,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         singleLabel.isHidden = displayMode != .singleLine
         verticalStack.isHidden = displayMode != .twoLine
         container.isHidden = false
+        container.layoutSubtreeIfNeeded()
 
         let textAttributes: [NSAttributedString.Key: Any] = [
             .font: singleLabel.font ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
@@ -368,12 +374,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let topWidth = (topLabel.stringValue as NSString).size(withAttributes: [.font: topLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
         let bottomWidth = (bottomLabel.stringValue as NSString).size(withAttributes: [.font: bottomLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
         let textWidth = displayMode == .singleLine ? singleLineWidth : max(topWidth, bottomWidth)
-        fanStatusItem?.length = ceil(textWidth) + 31
+        fanStatusItem?.length = ceil(textWidth) + 34
 
         if isSpinning {
-            startFanIconAnimationIfNeeded(iconView)
+            startFanAnimation(on: iconView)
         } else {
-            stopFanIconAnimation(iconView)
+            stopFanAnimation(on: iconView)
         }
     }
 
@@ -385,22 +391,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         fanStatusTopLabel = nil
         fanStatusBottomLabel = nil
         fanStatusVerticalStack = nil
+        stopFanAnimation()
     }
 
-    private func startFanIconAnimationIfNeeded(_ imageView: NSImageView) {
-        guard imageView.layer?.animation(forKey: "spin") == nil else { return }
-        imageView.layer?.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        imageView.layer?.position = CGPoint(x: imageView.bounds.midX, y: imageView.bounds.midY)
-        let animation = CABasicAnimation(keyPath: "transform.rotation.z")
-        animation.fromValue = 0
-        animation.toValue = Double.pi * 2
-        animation.duration = 0.8
-        animation.repeatCount = .infinity
-        imageView.layer?.add(animation, forKey: "spin")
+    private func startFanAnimation(on imageView: NSImageView) {
+        guard fanAnimationTimer == nil else { return }
+        if let firstFrame = fanAnimationFrames.first {
+            imageView.image = firstFrame
+        }
+        fanAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { [weak self, weak imageView] _ in
+            guard let self, let imageView else { return }
+            self.fanAnimationFrameIndex = (self.fanAnimationFrameIndex + 1) % max(self.fanAnimationFrames.count, 1)
+            imageView.image = self.fanAnimationFrames[self.fanAnimationFrameIndex]
+        }
     }
 
-    private func stopFanIconAnimation(_ imageView: NSImageView) {
-        imageView.layer?.removeAnimation(forKey: "spin")
+    private func stopFanAnimation(on imageView: NSImageView) {
+        stopFanAnimation()
+        imageView.image = fanIdleImage
+    }
+
+    private func stopFanAnimation() {
+        fanAnimationTimer?.invalidate()
+        fanAnimationTimer = nil
+        fanAnimationFrameIndex = 0
+    }
+
+    private static func makeFanAnimationFrames() -> [NSImage] {
+        guard let baseImage = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller") else {
+            return []
+        }
+
+        return stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 4).compactMap { angle in
+            baseImage.rotated(by: angle)
+        }
     }
 
     private func rebuildStatusMenu() {
@@ -480,5 +504,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func isSettingsWindow(_ window: NSWindow) -> Bool {
         window.title.localizedCaseInsensitiveContains("settings")
+    }
+}
+
+private extension NSImage {
+    func rotated(by radians: Double) -> NSImage? {
+        let result = NSImage(size: size)
+        result.lockFocus()
+        guard let context = NSGraphicsContext.current?.cgContext else {
+            result.unlockFocus()
+            return nil
+        }
+
+        context.translateBy(x: size.width / 2, y: size.height / 2)
+        context.rotate(by: radians)
+        context.translateBy(x: -size.width / 2, y: -size.height / 2)
+        draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .sourceOver, fraction: 1)
+        result.unlockFocus()
+        result.isTemplate = true
+        return result
     }
 }
