@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var fanStatusSingleLineLabel: NSTextField?
     private var fanStatusTopLabel: NSTextField?
     private var fanStatusBottomLabel: NSTextField?
+    private var fanStatusVerticalStack: NSStackView?
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
     private weak var mainWindow: NSWindow?
@@ -164,13 +165,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         let tempDisplay = AppState.shared.fanMenuTemperatureDisplay()
-        let temperatureText = tempDisplay.value.map { "\(Int($0.rounded()))C" } ?? "--"
-        let rpmText = "\(fan.rpm)rpm"
+        let temperatureText = tempDisplay.value.map { String(format: "%.0f°C", $0) } ?? "--"
+        let rpmText = "\(fan.rpm) rpm"
         let displayMode = AppState.shared.fanMenuDisplayMode
 
         button.title = ""
         button.image = nil
-        fanStatusItem?.length = displayMode == .singleLine ? NSStatusItem.variableLength : 58
         installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode, isSpinning: fan.rpm > 0)
     }
 
@@ -268,19 +268,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let singleLabel: NSTextField
         let topLabel: NSTextField
         let bottomLabel: NSTextField
+        let verticalStack: NSStackView
 
         if
             let existing = fanStatusView,
             let existingIcon = fanStatusIconView,
             let existingSingle = fanStatusSingleLineLabel,
             let existingTop = fanStatusTopLabel,
-            let existingBottom = fanStatusBottomLabel
+            let existingBottom = fanStatusBottomLabel,
+            let existingVerticalStack = fanStatusVerticalStack
         {
             container = existing
             iconView = existingIcon
             singleLabel = existingSingle
             topLabel = existingTop
             bottomLabel = existingBottom
+            verticalStack = existingVerticalStack
         } else {
             let createdIcon = NSImageView()
             createdIcon.image = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
@@ -288,8 +291,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             createdIcon.translatesAutoresizingMaskIntoConstraints = false
             createdIcon.wantsLayer = true
             NSLayoutConstraint.activate([
-                createdIcon.widthAnchor.constraint(equalToConstant: 12),
-                createdIcon.heightAnchor.constraint(equalToConstant: 12)
+                createdIcon.widthAnchor.constraint(equalToConstant: 13),
+                createdIcon.heightAnchor.constraint(equalToConstant: 13)
             ])
 
             let createdSingle = NSTextField(labelWithString: "")
@@ -298,35 +301,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             createdSingle.backgroundColor = .clear
             createdSingle.isBordered = false
             createdSingle.isEditable = false
-            createdSingle.lineBreakMode = .byClipping
+            createdSingle.lineBreakMode = .byWordWrapping
+            createdSingle.maximumNumberOfLines = 1
+            createdSingle.setContentCompressionResistancePriority(.required, for: .horizontal)
 
             let createdTop = NSTextField(labelWithString: "")
             let createdBottom = NSTextField(labelWithString: "")
             [createdTop, createdBottom].forEach {
-                $0.alignment = .left
+                $0.alignment = .center
                 $0.font = NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)
                 $0.textColor = .labelColor
                 $0.backgroundColor = .clear
                 $0.isBordered = false
                 $0.isEditable = false
+                $0.lineBreakMode = .byClipping
+                $0.setContentCompressionResistancePriority(.required, for: .horizontal)
             }
 
-            let verticalStack = NSStackView(views: [createdTop, createdBottom])
-            verticalStack.orientation = .vertical
-            verticalStack.alignment = .leading
-            verticalStack.distribution = .fillEqually
-            verticalStack.spacing = -1
+            let createdVerticalStack = NSStackView(views: [createdTop, createdBottom])
+            createdVerticalStack.orientation = .vertical
+            createdVerticalStack.alignment = .centerX
+            createdVerticalStack.distribution = .fillEqually
+            createdVerticalStack.spacing = -1
 
-            let created = NSStackView(views: [createdIcon, createdSingle, verticalStack])
+            let created = NSStackView(views: [createdIcon, createdSingle, createdVerticalStack])
             created.orientation = .horizontal
             created.alignment = .centerY
-            created.spacing = 5
+            created.spacing = 4
+            created.edgeInsets = NSEdgeInsets(top: 0, left: 4, bottom: 0, right: 4)
             created.translatesAutoresizingMaskIntoConstraints = false
 
             button.addSubview(created)
             NSLayoutConstraint.activate([
                 created.centerXAnchor.constraint(equalTo: button.centerXAnchor),
-                created.centerYAnchor.constraint(equalTo: button.centerYAnchor)
+                created.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+                created.leadingAnchor.constraint(greaterThanOrEqualTo: button.leadingAnchor, constant: 0),
+                created.trailingAnchor.constraint(lessThanOrEqualTo: button.trailingAnchor, constant: 0)
             ])
 
             fanStatusView = created
@@ -334,20 +344,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             fanStatusSingleLineLabel = createdSingle
             fanStatusTopLabel = createdTop
             fanStatusBottomLabel = createdBottom
+            fanStatusVerticalStack = createdVerticalStack
 
             container = created
             iconView = createdIcon
             singleLabel = createdSingle
             topLabel = createdTop
             bottomLabel = createdBottom
+            verticalStack = createdVerticalStack
         }
 
         singleLabel.stringValue = "\(rpmText) / \(temperatureText)"
         topLabel.stringValue = rpmText
         bottomLabel.stringValue = temperatureText
         singleLabel.isHidden = displayMode != .singleLine
-        topLabel.superview?.isHidden = displayMode != .twoLine
+        verticalStack.isHidden = displayMode != .twoLine
         container.isHidden = false
+
+        let textAttributes: [NSAttributedString.Key: Any] = [
+            .font: singleLabel.font ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+        ]
+        let singleLineWidth = (singleLabel.stringValue as NSString).size(withAttributes: textAttributes).width
+        let topWidth = (topLabel.stringValue as NSString).size(withAttributes: [.font: topLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
+        let bottomWidth = (bottomLabel.stringValue as NSString).size(withAttributes: [.font: bottomLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
+        let textWidth = displayMode == .singleLine ? singleLineWidth : max(topWidth, bottomWidth)
+        fanStatusItem?.length = ceil(textWidth) + 31
 
         if isSpinning {
             startFanIconAnimationIfNeeded(iconView)
@@ -363,11 +384,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         fanStatusSingleLineLabel = nil
         fanStatusTopLabel = nil
         fanStatusBottomLabel = nil
+        fanStatusVerticalStack = nil
     }
 
     private func startFanIconAnimationIfNeeded(_ imageView: NSImageView) {
         guard imageView.layer?.animation(forKey: "spin") == nil else { return }
         imageView.layer?.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        imageView.layer?.position = CGPoint(x: imageView.bounds.midX, y: imageView.bounds.midY)
         let animation = CABasicAnimation(keyPath: "transform.rotation.z")
         animation.fromValue = 0
         animation.toValue = Double.pi * 2
