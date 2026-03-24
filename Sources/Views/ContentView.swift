@@ -1073,9 +1073,24 @@ struct SettingsView: View {
                         if appState.showsAdvancedTelemetryWidgets {
                             Toggle("Show fan controller in menu bar", isOn: $appState.showsFanControllerMenuBarItem)
 
+                            Picker("Fan menu style", selection: $appState.fanMenuDisplayMode) {
+                                ForEach(FanMenuDisplayMode.allCases) { mode in
+                                    Text(mode.rawValue).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
                             Picker("Fan menu temperature", selection: $appState.fanMenuTemperatureSource) {
                                 ForEach(FanMenuTemperatureSource.allCases) { source in
                                     Text(source.rawValue).tag(source)
+                                }
+                            }
+
+                            if appState.currentThermalDetails.fanSpeedsRPM.count > 1 {
+                                Picker("Fan shown in menu bar", selection: $appState.selectedFanMenuIndex) {
+                                    ForEach(Array(appState.currentThermalDetails.fanSpeedsRPM.enumerated()), id: \.offset) { index, fan in
+                                        Text(fan.name).tag(index)
+                                    }
                                 }
                             }
                         }

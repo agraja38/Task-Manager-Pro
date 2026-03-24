@@ -36,6 +36,13 @@ enum FanMenuTemperatureSource: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum FanMenuDisplayMode: String, CaseIterable, Identifiable {
+    case singleLine = "Single Line"
+    case twoLine = "Two Lines"
+
+    var id: String { rawValue }
+}
+
 enum AppearanceMode: String, CaseIterable, Identifiable {
     case system = "Use System"
     case light = "Light"

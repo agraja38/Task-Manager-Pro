@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.65"
-BUILD_NUMBER="165"
+VERSION="1.0.66"
+BUILD_NUMBER="166"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -107,11 +107,11 @@ xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.65",
-  "build": 165,
-  "notes": "Add a separate fan controller menu bar item with temperature selection, and move Auto, Full Blast, and presets into that fan menu.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.65/TaskManagerPro-1.0.65-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.65/TaskManagerPro-1.0.65-intel.dmg"
+  "version": "1.0.66",
+  "build": 166,
+  "notes": "Add single-line and two-line fan menu bar layouts with a rotating fan icon and keep quit access in the fan controller menu.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.66/TaskManagerPro-1.0.66-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.66/TaskManagerPro-1.0.66-intel.dmg"
 }
 JSON
 

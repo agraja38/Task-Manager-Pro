@@ -1,10 +1,16 @@
 import AppKit
+import QuartzCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var fanStatusItem: NSStatusItem?
     private var twoLineStatusView: NSStackView?
+    private var fanStatusView: NSStackView?
+    private var fanStatusIconView: NSImageView?
+    private var fanStatusSingleLineLabel: NSTextField?
+    private var fanStatusTopLabel: NSTextField?
+    private var fanStatusBottomLabel: NSTextField?
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
     private weak var mainWindow: NSWindow?
@@ -119,6 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else if let fanStatusItem {
             NSStatusBar.system.removeStatusItem(fanStatusItem)
             self.fanStatusItem = nil
+            removeFanStatusView()
         }
     }
 
@@ -149,23 +156,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func updateFanStatusItemDisplay() {
-        guard let button = fanStatusItem?.button, let fan = AppState.shared.currentThermalDetails.fanSpeedsRPM.first else {
+        guard let button = fanStatusItem?.button, let fan = AppState.shared.selectedFanForMenu() else {
             fanStatusItem?.button?.title = ""
             fanStatusItem?.button?.image = nil
+            removeFanStatusView()
             return
         }
 
         let tempDisplay = AppState.shared.fanMenuTemperatureDisplay()
-        let temperatureText: String
-        if let value = tempDisplay.value {
-            temperatureText = "\(tempDisplay.label) \(Int(value.rounded()))C"
-        } else {
-            temperatureText = "\(tempDisplay.label) --"
-        }
+        let temperatureText = tempDisplay.value.map { "\(Int($0.rounded()))C" } ?? "--"
+        let rpmText = "\(fan.rpm)rpm"
+        let displayMode = AppState.shared.fanMenuDisplayMode
 
-        button.image = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
-        button.imagePosition = .imageLeading
-        button.title = "\(fan.rpm)rpm \(temperatureText)"
+        button.title = ""
+        button.image = nil
+        fanStatusItem?.length = displayMode == .singleLine ? NSStatusItem.variableLength : 58
+        installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode, isSpinning: fan.rpm > 0)
     }
 
     @objc private func openMainWindow() {
@@ -256,6 +262,124 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         twoLineStatusView = nil
     }
 
+    private func installFanStatusView(in button: NSStatusBarButton, rpmText: String, temperatureText: String, displayMode: FanMenuDisplayMode, isSpinning: Bool) {
+        let container: NSStackView
+        let iconView: NSImageView
+        let singleLabel: NSTextField
+        let topLabel: NSTextField
+        let bottomLabel: NSTextField
+
+        if
+            let existing = fanStatusView,
+            let existingIcon = fanStatusIconView,
+            let existingSingle = fanStatusSingleLineLabel,
+            let existingTop = fanStatusTopLabel,
+            let existingBottom = fanStatusBottomLabel
+        {
+            container = existing
+            iconView = existingIcon
+            singleLabel = existingSingle
+            topLabel = existingTop
+            bottomLabel = existingBottom
+        } else {
+            let createdIcon = NSImageView()
+            createdIcon.image = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
+            createdIcon.contentTintColor = .labelColor
+            createdIcon.translatesAutoresizingMaskIntoConstraints = false
+            createdIcon.wantsLayer = true
+            NSLayoutConstraint.activate([
+                createdIcon.widthAnchor.constraint(equalToConstant: 12),
+                createdIcon.heightAnchor.constraint(equalToConstant: 12)
+            ])
+
+            let createdSingle = NSTextField(labelWithString: "")
+            createdSingle.font = .monospacedSystemFont(ofSize: 11, weight: .medium)
+            createdSingle.textColor = .labelColor
+            createdSingle.backgroundColor = .clear
+            createdSingle.isBordered = false
+            createdSingle.isEditable = false
+            createdSingle.lineBreakMode = .byClipping
+
+            let createdTop = NSTextField(labelWithString: "")
+            let createdBottom = NSTextField(labelWithString: "")
+            [createdTop, createdBottom].forEach {
+                $0.alignment = .left
+                $0.font = NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)
+                $0.textColor = .labelColor
+                $0.backgroundColor = .clear
+                $0.isBordered = false
+                $0.isEditable = false
+            }
+
+            let verticalStack = NSStackView(views: [createdTop, createdBottom])
+            verticalStack.orientation = .vertical
+            verticalStack.alignment = .leading
+            verticalStack.distribution = .fillEqually
+            verticalStack.spacing = -1
+
+            let created = NSStackView(views: [createdIcon, createdSingle, verticalStack])
+            created.orientation = .horizontal
+            created.alignment = .centerY
+            created.spacing = 5
+            created.translatesAutoresizingMaskIntoConstraints = false
+
+            button.addSubview(created)
+            NSLayoutConstraint.activate([
+                created.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+                created.centerYAnchor.constraint(equalTo: button.centerYAnchor)
+            ])
+
+            fanStatusView = created
+            fanStatusIconView = createdIcon
+            fanStatusSingleLineLabel = createdSingle
+            fanStatusTopLabel = createdTop
+            fanStatusBottomLabel = createdBottom
+
+            container = created
+            iconView = createdIcon
+            singleLabel = createdSingle
+            topLabel = createdTop
+            bottomLabel = createdBottom
+        }
+
+        singleLabel.stringValue = "\(rpmText) / \(temperatureText)"
+        topLabel.stringValue = rpmText
+        bottomLabel.stringValue = temperatureText
+        singleLabel.isHidden = displayMode != .singleLine
+        topLabel.superview?.isHidden = displayMode != .twoLine
+        container.isHidden = false
+
+        if isSpinning {
+            startFanIconAnimationIfNeeded(iconView)
+        } else {
+            stopFanIconAnimation(iconView)
+        }
+    }
+
+    private func removeFanStatusView() {
+        fanStatusView?.removeFromSuperview()
+        fanStatusView = nil
+        fanStatusIconView = nil
+        fanStatusSingleLineLabel = nil
+        fanStatusTopLabel = nil
+        fanStatusBottomLabel = nil
+    }
+
+    private func startFanIconAnimationIfNeeded(_ imageView: NSImageView) {
+        guard imageView.layer?.animation(forKey: "spin") == nil else { return }
+        imageView.layer?.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        let animation = CABasicAnimation(keyPath: "transform.rotation.z")
+        animation.fromValue = 0
+        animation.toValue = Double.pi * 2
+        animation.duration = 0.8
+        animation.repeatCount = .infinity
+        imageView.layer?.add(animation, forKey: "spin")
+    }
+
+    private func stopFanIconAnimation(_ imageView: NSImageView) {
+        imageView.layer?.removeAnimation(forKey: "spin")
+    }
+
     private func rebuildStatusMenu() {
         guard let menu = statusItem?.menu else { return }
         menu.removeAllItems()
@@ -290,6 +414,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.representedObject = preset.id.uuidString
             menu.addItem(item)
         }
+
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Quit Task Manager Pro", action: #selector(quitApp), keyEquivalent: "q")
     }
 
     @objc private func applyFanPresetFromMenu(_ sender: NSMenuItem) {

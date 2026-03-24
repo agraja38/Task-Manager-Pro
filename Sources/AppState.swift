@@ -63,9 +63,21 @@ final class AppState: ObservableObject {
             NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil)
         }
     }
+    @Published var fanMenuDisplayMode: FanMenuDisplayMode = UserDefaults.standard.string(forKey: "fanMenuDisplayMode").flatMap(FanMenuDisplayMode.init(rawValue:)) ?? .singleLine {
+        didSet {
+            UserDefaults.standard.set(fanMenuDisplayMode.rawValue, forKey: "fanMenuDisplayMode")
+            NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil)
+        }
+    }
     @Published var fanMenuTemperatureSource: FanMenuTemperatureSource = UserDefaults.standard.string(forKey: "fanMenuTemperatureSource").flatMap(FanMenuTemperatureSource.init(rawValue:)) ?? .cpuAverage {
         didSet {
             UserDefaults.standard.set(fanMenuTemperatureSource.rawValue, forKey: "fanMenuTemperatureSource")
+            NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil)
+        }
+    }
+    @Published var selectedFanMenuIndex: Int = UserDefaults.standard.integer(forKey: "selectedFanMenuIndex") {
+        didSet {
+            UserDefaults.standard.set(selectedFanMenuIndex, forKey: "selectedFanMenuIndex")
             NotificationCenter.default.post(name: .pulseTaskMenuBarPreferencesDidChange, object: nil)
         }
     }
@@ -455,6 +467,13 @@ final class AppState: ObservableObject {
             let trackpad = currentThermalDetails.hottestSensors.first(where: { $0.name == "Trackpad" || $0.name.contains("Trackpad") })?.valueC
             return ("Track", trackpad)
         }
+    }
+
+    func selectedFanForMenu() -> FanSpeedSnapshot? {
+        let fans = currentThermalDetails.fanSpeedsRPM
+        guard !fans.isEmpty else { return nil }
+        let index = min(max(selectedFanMenuIndex, 0), fans.count - 1)
+        return fans[index]
     }
 
     private static func loadFanPresets() -> [FanPreset] {
