@@ -473,7 +473,8 @@ final class SMCReader {
         appendExact(["TV0P"], as: "Power Supply Proximity")
         appendExact(["TH0P"], as: "Thunderbolt Left Proximity")
         appendExact(["TH1P"], as: "Thunderbolt Right Proximity")
-        appendExact(["TaPT"], as: "Trackpad")
+        appendExact(["TS0P", "TaLP", "TaLW", "TaRW"], as: "Palm Rest")
+        appendExact(["TaPT", "TaLT", "TaRT", "TaTP"], as: "Trackpad")
         appendExact(["TaPA"], as: "Trackpad Actuator")
         appendExact(["Ts0S"], as: "APPLE SSD AP1024Z")
 

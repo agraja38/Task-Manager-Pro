@@ -642,6 +642,11 @@ struct ThermalsView: View {
                                 }
                                 .buttonStyle(.borderedProminent)
 
+                                Button("Auto") {
+                                    appState.setAutomaticFanControl()
+                                }
+                                .buttonStyle(.bordered)
+
                                 Spacer()
                             }
 

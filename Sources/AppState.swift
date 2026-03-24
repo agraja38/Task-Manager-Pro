@@ -266,6 +266,19 @@ final class AppState: ObservableObject {
         }
     }
 
+    func setAutomaticFanControl() {
+        guard showsAdvancedTelemetryWidgets else { return }
+        let fans = currentThermalDetails.fanSpeedsRPM
+        guard !fans.isEmpty else { return }
+
+        let result = fanControlService.restoreAutomaticControl(for: fans.map(\.index))
+        latestError = result.message
+        if result.success {
+            manualFanMinimumsRPM = fans.map(\.minRPM)
+            refreshAll()
+        }
+    }
+
     func saveCurrentFanPreset(named name: String) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {

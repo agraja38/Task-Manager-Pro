@@ -152,6 +152,13 @@ private final class FanControllerSMC {
         }
     }
 
+    func restoreAutomaticMode(for fanIndices: [Int]) throws {
+        try ensureOpen()
+        for index in fanIndices.sorted() {
+            try disableManualModeIfAvailable(fanIndex: index)
+        }
+    }
+
     private func ensureOpen() throws {
         if connection != 0 { return }
 
@@ -321,6 +328,21 @@ private final class FanControllerSMC {
         try writeData([UInt8((updatedValue >> 8) & 0xff), UInt8(updatedValue & 0xff)], for: HelperSMCKey(code: maskCode, info: info))
     }
 
+    private func disableManualModeIfAvailable(fanIndex: Int) throws {
+        let modeCode = FourCharCode(fromString: "F\(fanIndex)Md")
+        if maybeKeyInfo(for: modeCode) != nil {
+            try writeNumericValue(0, to: modeCode)
+            return
+        }
+
+        let maskCode = FourCharCode(fromStaticString: "FS! ")
+        guard let info = maybeKeyInfo(for: maskCode) else { return }
+        let currentMask = try readData(for: HelperSMCKey(code: maskCode, info: info))
+        let currentValue = (UInt16(currentMask.0) << 8) | UInt16(currentMask.1)
+        let updatedValue = currentValue & ~UInt16(1 << fanIndex)
+        try writeData([UInt8((updatedValue >> 8) & 0xff), UInt8(updatedValue & 0xff)], for: HelperSMCKey(code: maskCode, info: info))
+    }
+
     private func clampedRPM(_ requested: Int, fanIndex: Int) throws -> Int {
         let minimum = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mn"))) ?? 1200.0)
         let maximum = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mx"))) ?? Double(max(requested, minimum)))
@@ -336,6 +358,11 @@ private struct FanControlResult: Codable {
     let message: String
 }
 
+private enum FanControlCommand {
+    case manual([Int: Int])
+    case auto([Int])
+}
+
 private func parseTargets(from arguments: [String]) throws -> [Int: Int] {
     guard !arguments.isEmpty else { throw HelperError.invalidArguments }
     var targets: [Int: Int] = [:]
@@ -347,6 +374,16 @@ private func parseTargets(from arguments: [String]) throws -> [Int: Int] {
         targets[index] = rpm
     }
     return targets
+}
+
+private func parseCommand(from arguments: [String]) throws -> FanControlCommand {
+    guard !arguments.isEmpty else { throw HelperError.invalidArguments }
+    if arguments.first == "--auto" {
+        let fanIndices = Array(arguments.dropFirst()).compactMap(Int.init)
+        guard !fanIndices.isEmpty else { throw HelperError.invalidArguments }
+        return .auto(fanIndices)
+    }
+    return .manual(try parseTargets(from: arguments))
 }
 
 private func writeResult(_ result: FanControlResult, to url: URL) throws {
@@ -362,10 +399,16 @@ guard let resultPath = arguments.first else {
 
 let resultURL = URL(fileURLWithPath: resultPath)
 do {
-    let targets = try parseTargets(from: Array(arguments.dropFirst()))
+    let command = try parseCommand(from: Array(arguments.dropFirst()))
     let controller = FanControllerSMC()
-    try controller.applyTargets(targets)
-    try writeResult(FanControlResult(success: true, message: "Applied fan speeds."), to: resultURL)
+    switch command {
+    case let .manual(targets):
+        try controller.applyTargets(targets)
+        try writeResult(FanControlResult(success: true, message: "Applied fan speeds."), to: resultURL)
+    case let .auto(indices):
+        try controller.restoreAutomaticMode(for: indices)
+        try writeResult(FanControlResult(success: true, message: "Restored automatic fan control."), to: resultURL)
+    }
     exit(0)
 } catch {
     try? writeResult(FanControlResult(success: false, message: error.localizedDescription), to: resultURL)

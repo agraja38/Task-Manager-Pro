@@ -21,6 +21,14 @@ final class FanControlService {
     }
 
     func applyFanTargets(_ speedsByFanIndex: [Int: Int]) -> (success: Bool, message: String) {
+        runHelper(arguments: speedsByFanIndex.sorted(by: { $0.key < $1.key }).map { "\($0.key):\($0.value)" })
+    }
+
+    func restoreAutomaticControl(for fanIndices: [Int]) -> (success: Bool, message: String) {
+        runHelper(arguments: ["--auto"] + fanIndices.sorted().map(String.init))
+    }
+
+    private func runHelper(arguments helperArguments: [String]) -> (success: Bool, message: String) {
         do {
             let authorizationRef = try authorizeExecution()
             let resultURL = FileManager.default.temporaryDirectory
@@ -28,7 +36,7 @@ final class FanControlService {
                 .appendingPathExtension("json")
             defer { try? FileManager.default.removeItem(at: resultURL) }
 
-            let status = try launchHelper(with: speedsByFanIndex, authorizationRef: authorizationRef, resultURL: resultURL)
+            let status = try launchHelper(arguments: helperArguments, authorizationRef: authorizationRef, resultURL: resultURL)
             guard status == errAuthorizationSuccess else {
                 if status == errAuthorizationCanceled {
                     return (false, "Fan control was canceled.")
@@ -72,7 +80,7 @@ final class FanControlService {
         return authorizationRef
     }
 
-    private func launchHelper(with speedsByFanIndex: [Int: Int], authorizationRef: AuthorizationRef, resultURL: URL) throws -> OSStatus {
+    private func launchHelper(arguments helperArguments: [String], authorizationRef: AuthorizationRef, resultURL: URL) throws -> OSStatus {
         guard let helperURL = Bundle.main.url(forResource: "TaskManagerProFanHelper", withExtension: nil) else {
             throw FanControlError.helperMissing
         }
@@ -82,7 +90,7 @@ final class FanControlService {
         }
         defer { free(toolCString) }
 
-        let arguments = [resultURL.path] + speedsByFanIndex.sorted(by: { $0.key < $1.key }).map { "\($0.key):\($0.value)" }
+        let arguments = [resultURL.path] + helperArguments
         let cStrings = try arguments.map { argument -> UnsafeMutablePointer<CChar> in
             guard let duplicate = strdup(argument) else {
                 throw FanControlError.executionFailed("Task Manager Pro could not prepare the helper arguments.")

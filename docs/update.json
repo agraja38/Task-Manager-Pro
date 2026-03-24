@@ -1,7 +1,7 @@
 {
-  "version": "1.0.62",
-  "build": 162,
-  "notes": "Move fan control to a dedicated helper-backed path and group thermal sensors into clearer categories.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.62/TaskManagerPro-1.0.62-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.62/TaskManagerPro-1.0.62-intel.dmg"
+  "version": "1.0.63",
+  "build": 163,
+  "notes": "Add Auto fan mode and surface more palm rest and trackpad thermal readings.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.63/TaskManagerPro-1.0.63-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.63/TaskManagerPro-1.0.63-intel.dmg"
 }
