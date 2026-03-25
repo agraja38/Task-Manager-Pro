@@ -1,7 +1,7 @@
 {
-  "version": "1.0.76",
-  "build": 176,
-  "notes": "Rename thermal summary cards and prefer real CPU/GPU average sensors for those readings.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.76/TaskManagerPro-1.0.76-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.76/TaskManagerPro-1.0.76-intel.dmg"
+  "version": "1.0.79",
+  "build": 179,
+  "notes": "Fix the update feed so the app correctly sees the latest release, and keep the single-line fan menu bar icon rendered in white.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.79/TaskManagerPro-1.0.79-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.79/TaskManagerPro-1.0.79-intel.dmg"
 }

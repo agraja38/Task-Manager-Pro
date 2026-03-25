@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.78"
-BUILD_NUMBER="178"
+VERSION="1.0.79"
+BUILD_NUMBER="179"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -107,13 +107,13 @@ fi
 xattr -cr "$HOST_APP" 2>/dev/null || true
 xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
-cat > "$ROOT_DIR/docs/update.json" <<'JSON'
+cat > "$ROOT_DIR/docs/update.json" <<JSON
 {
-  "version": "1.0.76",
-  "build": 176,
-  "notes": "Rename thermal summary cards and prefer real CPU/GPU average sensors for those readings.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.76/TaskManagerPro-1.0.76-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.76/TaskManagerPro-1.0.76-intel.dmg"
+  "version": "${VERSION}",
+  "build": ${BUILD_NUMBER},
+  "notes": "Fix the update feed so the app correctly sees the latest release, and keep the single-line fan menu bar icon rendered in white.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v${VERSION}/TaskManagerPro-${VERSION}-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v${VERSION}/TaskManagerPro-${VERSION}-intel.dmg"
 }
 JSON
 
