@@ -177,24 +177,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let displayMode = AppState.shared.fanMenuDisplayMode
         let isSpinning = fan.rpm > 0
 
-        if displayMode == .singleLine {
-            removeFanStatusView()
-            button.imagePosition = .imageLeading
-            button.attributedTitle = NSAttributedString(
-                string: "\(rpmText) / \(temperatureText)",
-                attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)]
-            )
-
-            let textWidth = (button.attributedTitle.string as NSString).size(withAttributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
-            ]).width
-            fanStatusItem?.length = ceil(textWidth) + 40
-        } else {
-            button.title = ""
-            button.attributedTitle = NSAttributedString(string: "")
-            button.image = nil
-            installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode)
-        }
+        button.title = ""
+        button.attributedTitle = NSAttributedString(string: "")
+        button.image = nil
+        button.imagePosition = .noImage
+        installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode)
 
         let tintColor = NSColor.labelColor
         button.contentTintColor = tintColor
@@ -391,15 +378,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         singleLabel.stringValue = "\(rpmText) / \(temperatureText)"
         topLabel.stringValue = rpmText
         bottomLabel.stringValue = temperatureText
-        singleLabel.isHidden = true
+        singleLabel.isHidden = displayMode != .singleLine
         verticalStack.isHidden = displayMode != .twoLine
         container.isHidden = false
         container.layoutSubtreeIfNeeded()
 
+        let singleWidth = (singleLabel.stringValue as NSString).size(withAttributes: [.font: singleLabel.font ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)]).width
         let topWidth = (topLabel.stringValue as NSString).size(withAttributes: [.font: topLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
         let bottomWidth = (bottomLabel.stringValue as NSString).size(withAttributes: [.font: bottomLabel.font ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)]).width
-        let textWidth = max(topWidth, bottomWidth)
-        fanStatusItem?.length = ceil(textWidth) + 30
+        let textWidth = displayMode == .singleLine ? singleWidth : max(topWidth, bottomWidth)
+        fanStatusItem?.length = ceil(textWidth) + (displayMode == .singleLine ? 28 : 30)
     }
 
     private func removeFanStatusView() {
@@ -428,12 +416,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func renderFanAnimationFrame() {
         let image = currentFanAnimationImage()
-        if AppState.shared.fanMenuDisplayMode == .singleLine {
-            fanStatusItem?.button?.image = image?.asTemplateImage()
-            fanStatusItem?.button?.imagePosition = .imageLeading
-        } else {
-            fanStatusIconView?.image = image?.asTemplateImage()
-        }
+        fanStatusIconView?.image = image?.asTemplateImage()
     }
 
     private func currentFanAnimationImage() -> NSImage? {
