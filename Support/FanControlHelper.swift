@@ -81,6 +81,7 @@ private enum HelperError: LocalizedError {
     case invalidResponse(kern_return_t, UInt8)
     case keyNotFound(String)
     case unsupportedDataType(String)
+    case fanDidNotSpinUp(Int)
 
     var errorDescription: String? {
         switch self {
@@ -96,6 +97,8 @@ private enum HelperError: LocalizedError {
             return "Required fan key \(key) is not available on this Mac."
         case let .unsupportedDataType(type):
             return "Unsupported SMC data type \(type)."
+        case let .fanDidNotSpinUp(index):
+            return "Fan \(index + 1) did not spin up from 0 RPM."
         }
     }
 }
@@ -148,6 +151,7 @@ private final class FanControllerSMC {
         for (index, requestedRPM) in targets.sorted(by: { $0.key < $1.key }) {
             let boundedRPM = try clampedRPM(requestedRPM, fanIndex: index)
             try enableManualModeIfAvailable(fanIndex: index)
+            Thread.sleep(forTimeInterval: 0.1)
             let currentRPM = actualRPM(for: index)
             if currentRPM == 0 && boundedRPM > 0 {
                 try forceSpinUpStoppedFan(to: boundedRPM, fanIndex: index)
@@ -325,16 +329,18 @@ private final class FanControllerSMC {
         try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
         try? writeNumericValue(spinUpRPM, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
 
-        let deadline = Date().addingTimeInterval(1.4)
+        let deadline = Date().addingTimeInterval(2.5)
         while Date() < deadline {
             Thread.sleep(forTimeInterval: 0.12)
             if actualRPM(for: fanIndex) > 0 {
-                break
+                try writeTargetSpeed(rpm, fanIndex: fanIndex)
+                return
             }
             try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
+            try enableManualModeIfAvailable(fanIndex: fanIndex)
         }
 
-        try writeTargetSpeed(rpm, fanIndex: fanIndex)
+        throw HelperError.fanDidNotSpinUp(fanIndex)
     }
 
     private func actualRPM(for fanIndex: Int) -> Int {
@@ -345,30 +351,30 @@ private final class FanControllerSMC {
         let modeCode = FourCharCode(fromString: "F\(fanIndex)Md")
         if maybeKeyInfo(for: modeCode) != nil {
             try writeNumericValue(1, to: modeCode)
-            return
         }
 
         let maskCode = FourCharCode(fromStaticString: "FS! ")
-        guard let info = maybeKeyInfo(for: maskCode) else { return }
-        let currentMask = try readData(for: HelperSMCKey(code: maskCode, info: info))
-        let currentValue = (UInt16(currentMask.0) << 8) | UInt16(currentMask.1)
-        let updatedValue = currentValue | UInt16(1 << fanIndex)
-        try writeData([UInt8((updatedValue >> 8) & 0xff), UInt8(updatedValue & 0xff)], for: HelperSMCKey(code: maskCode, info: info))
+        if let info = maybeKeyInfo(for: maskCode) {
+            let currentMask = try readData(for: HelperSMCKey(code: maskCode, info: info))
+            let currentValue = (UInt16(currentMask.0) << 8) | UInt16(currentMask.1)
+            let updatedValue = currentValue | UInt16(1 << fanIndex)
+            try writeData([UInt8((updatedValue >> 8) & 0xff), UInt8(updatedValue & 0xff)], for: HelperSMCKey(code: maskCode, info: info))
+        }
     }
 
     private func disableManualModeIfAvailable(fanIndex: Int) throws {
         let modeCode = FourCharCode(fromString: "F\(fanIndex)Md")
         if maybeKeyInfo(for: modeCode) != nil {
             try writeNumericValue(0, to: modeCode)
-            return
         }
 
         let maskCode = FourCharCode(fromStaticString: "FS! ")
-        guard let info = maybeKeyInfo(for: maskCode) else { return }
-        let currentMask = try readData(for: HelperSMCKey(code: maskCode, info: info))
-        let currentValue = (UInt16(currentMask.0) << 8) | UInt16(currentMask.1)
-        let updatedValue = currentValue & ~UInt16(1 << fanIndex)
-        try writeData([UInt8((updatedValue >> 8) & 0xff), UInt8(updatedValue & 0xff)], for: HelperSMCKey(code: maskCode, info: info))
+        if let info = maybeKeyInfo(for: maskCode) {
+            let currentMask = try readData(for: HelperSMCKey(code: maskCode, info: info))
+            let currentValue = (UInt16(currentMask.0) << 8) | UInt16(currentMask.1)
+            let updatedValue = currentValue & ~UInt16(1 << fanIndex)
+            try writeData([UInt8((updatedValue >> 8) & 0xff), UInt8(updatedValue & 0xff)], for: HelperSMCKey(code: maskCode, info: info))
+        }
     }
 
     private func clampedRPM(_ requested: Int, fanIndex: Int) throws -> Int {
