@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.72"
-BUILD_NUMBER="172"
+VERSION="1.0.73"
+BUILD_NUMBER="173"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -109,11 +109,11 @@ xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.72",
-  "build": 172,
-  "notes": "Tint the fan menu bar icon blue while the fan is spinning.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.72/TaskManagerPro-1.0.72-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.72/TaskManagerPro-1.0.72-intel.dmg"
+  "version": "1.0.73",
+  "build": 173,
+  "notes": "Keep the fan menu bar icon in the standard white label color at all times.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.73/TaskManagerPro-1.0.73-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.73/TaskManagerPro-1.0.73-intel.dmg"
 }
 JSON
 

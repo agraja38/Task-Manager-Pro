@@ -196,7 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode)
         }
 
-        let tintColor = isSpinning ? NSColor.systemBlue : NSColor.labelColor
+        let tintColor = NSColor.labelColor
         button.contentTintColor = tintColor
         fanStatusIconView?.contentTintColor = tintColor
 
