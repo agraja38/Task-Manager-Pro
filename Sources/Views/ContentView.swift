@@ -612,8 +612,8 @@ struct ThermalsView: View {
 
                 LazyVGrid(columns: topThermalColumns, spacing: 14) {
                     fanMetricCard
-                    MetricBadge(title: "CPU Temp", value: temperatureString(appState.currentThermalDetails.cpuTemperatureC), color: .red, prominence: .large)
-                    MetricBadge(title: "GPU Temp", value: temperatureString(appState.currentThermalDetails.gpuTemperatureC), color: .orange, prominence: .large)
+                    MetricBadge(title: "CPU Average", value: temperatureString(appState.currentThermalDetails.cpuTemperatureC), color: .red, prominence: .large)
+                    MetricBadge(title: "GPU Average", value: temperatureString(appState.currentThermalDetails.gpuTemperatureC), color: .orange, prominence: .large)
                     MetricBadge(title: "Palm Rest", value: temperatureString(appState.currentThermalDetails.palmRestTemperatureC), color: .pink, prominence: .large)
                 }
 

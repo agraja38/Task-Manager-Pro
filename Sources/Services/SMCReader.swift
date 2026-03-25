@@ -159,11 +159,13 @@ final class SMCReader {
     }
 
     private static let cpuPriorityKeys = [
+        "TCMA", "TC0C", "TC0F",
         "TCMz", "Te06", "Te0T", "TCMb", "Te05", "Te0S", "TCHP",
         "TfC0", "TfC1", "TfC2", "TfC3", "TfC4",
         "TC0P", "TC0F", "TC0D", "TC0H"
     ]
     private static let gpuPriorityKeys = [
+        "Tg0A", "TG0A", "TGAA",
         "Tg0Y", "Tg05", "Tg0S", "Tg0d", "Tg0X", "Tg0K", "Tg0L", "Tg04", "Tg0R",
         "TG0P", "TG0D", "TG0H"
     ]
@@ -212,8 +214,8 @@ final class SMCReader {
         try ensureOpen()
         let sensors = try readTemperatureSensors()
         let fans = try readFans()
-        let cpuTemperature = preferredTemperature(in: sensors, priority: Self.cpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TC", "Tp", "Te", "Tf"])
-        let gpuTemperature = preferredTemperature(in: sensors, priority: Self.gpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TG", "Tg"])
+        let cpuTemperature = exactNamedTemperature(in: sensors, names: ["CPU Core Average"]) ?? preferredTemperature(in: sensors, priority: Self.cpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TC", "Tp", "Te", "Tf"])
+        let gpuTemperature = exactNamedTemperature(in: sensors, names: ["GPU Cluster Average"]) ?? preferredTemperature(in: sensors, priority: Self.gpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TG", "Tg"])
         let palmRestTemperature = preferredTemperature(in: sensors, priority: Self.palmRestPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TS", "Ta"])
 
         let note: String
@@ -259,6 +261,15 @@ final class SMCReader {
         keyInfoCache.removeAll()
         cachedTemperatureKeys = nil
         cachedFanCount = nil
+    }
+
+    private func exactNamedTemperature(in sensors: [ThermalSensorSnapshot], names: [String]) -> Double? {
+        for name in names {
+            if let value = sensors.first(where: { $0.name == name })?.valueC {
+                return value
+            }
+        }
+        return nil
     }
 
     private func callDriver(_ inputStruct: inout SMCParamStruct, selector: SMCParamStruct.Selector = .handleYPCEvent) throws -> SMCParamStruct {

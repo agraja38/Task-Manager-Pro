@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.75"
-BUILD_NUMBER="175"
+VERSION="1.0.76"
+BUILD_NUMBER="176"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -109,11 +109,11 @@ xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.75",
-  "build": 175,
-  "notes": "Install a one-time privileged fan helper and reset the control mode before trying to wake parked fans.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.75/TaskManagerPro-1.0.75-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.75/TaskManagerPro-1.0.75-intel.dmg"
+  "version": "1.0.76",
+  "build": 176,
+  "notes": "Rename thermal summary cards and prefer real CPU/GPU average sensors for those readings.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.76/TaskManagerPro-1.0.76-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.76/TaskManagerPro-1.0.76-intel.dmg"
 }
 JSON
 

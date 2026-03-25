@@ -458,16 +458,13 @@ final class AppState: ObservableObject {
         switch fanMenuTemperatureSource {
         case .cpuAverage:
             let cpuAverage = currentThermalDetails.hottestSensors.first(where: { $0.name == "CPU Core Average" })?.valueC
-            return ("CPU", cpuAverage ?? currentThermalDetails.cpuTemperatureC)
+            return ("CPU Average", cpuAverage ?? currentThermalDetails.cpuTemperatureC)
         case .gpuAverage:
             let gpuAverage = currentThermalDetails.hottestSensors.first(where: { $0.name == "GPU Cluster Average" })?.valueC
-            return ("GPU", gpuAverage ?? currentThermalDetails.gpuTemperatureC)
+            return ("GPU Average", gpuAverage ?? currentThermalDetails.gpuTemperatureC)
         case .palmRest:
             let palmRest = currentThermalDetails.hottestSensors.first(where: { $0.name.contains("Palm Rest") })?.valueC
-            return ("Palm", palmRest ?? currentThermalDetails.palmRestTemperatureC)
-        case .trackpad:
-            let trackpad = currentThermalDetails.hottestSensors.first(where: { $0.name == "Trackpad" || $0.name.contains("Trackpad") })?.valueC
-            return ("Track", trackpad)
+            return ("Palm Rest", palmRest ?? currentThermalDetails.palmRestTemperatureC)
         }
     }
 
