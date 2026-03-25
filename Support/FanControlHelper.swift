@@ -326,6 +326,10 @@ private final class FanControllerSMC {
         let maxRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mx"))) ?? Double(rpm))
         let spinUpRPM = max(rpm, maxRPM)
 
+        try disableManualModeIfAvailable(fanIndex: fanIndex)
+        Thread.sleep(forTimeInterval: 0.1)
+        try enableManualModeIfAvailable(fanIndex: fanIndex)
+        Thread.sleep(forTimeInterval: 0.1)
         try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
         try? writeNumericValue(spinUpRPM, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
 

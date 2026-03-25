@@ -1,24 +1,7 @@
 import Foundation
-import Security
-
-@_silgen_name("PulseAuthorizationExecuteWithPrivileges")
-private func PulseAuthorizationExecuteWithPrivileges(
-    _ authorization: AuthorizationRef,
-    _ pathToTool: UnsafePointer<CChar>,
-    _ arguments: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
-) -> OSStatus
 
 final class FanControlService {
-    private let defaultFlags = AuthorizationFlags(rawValue: 0)
-    private let interactionAllowedFlags = AuthorizationFlags(rawValue: (1 << 0) | (1 << 1) | (1 << 4))
-    private let destroyRightsFlags = AuthorizationFlags(rawValue: 1 << 3)
-    private var cachedAuthorizationRef: AuthorizationRef?
-
-    deinit {
-        if let cachedAuthorizationRef {
-            AuthorizationFree(cachedAuthorizationRef, destroyRightsFlags)
-        }
-    }
+    private let installedHelperURL = URL(fileURLWithPath: "/Library/Application Support/TaskManagerPro/TaskManagerProFanHelper")
 
     func applyFanTargets(_ speedsByFanIndex: [Int: Int]) -> (success: Bool, message: String) {
         runHelper(arguments: speedsByFanIndex.sorted(by: { $0.key < $1.key }).map { "\($0.key):\($0.value)" })
@@ -30,20 +13,13 @@ final class FanControlService {
 
     private func runHelper(arguments helperArguments: [String]) -> (success: Bool, message: String) {
         do {
-            let authorizationRef = try authorizeExecution()
+            try ensureInstalledPrivilegedHelper()
             let resultURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent("taskmanagerpro-fancontrol-\(UUID().uuidString)")
                 .appendingPathExtension("json")
             defer { try? FileManager.default.removeItem(at: resultURL) }
 
-            let status = try launchHelper(arguments: helperArguments, authorizationRef: authorizationRef, resultURL: resultURL)
-            guard status == errAuthorizationSuccess else {
-                if status == errAuthorizationCanceled {
-                    return (false, "Fan control was canceled.")
-                }
-                return (false, "macOS could not authorize fan control. (Status \(status))")
-            }
-
+            try launchInstalledHelper(arguments: helperArguments, resultURL: resultURL)
             return try waitForResult(at: resultURL)
         } catch let error as FanControlError {
             return (false, error.localizedDescription)
@@ -52,58 +28,48 @@ final class FanControlService {
         }
     }
 
-    private func authorizeExecution() throws -> AuthorizationRef {
-        let authorizationRef: AuthorizationRef
-        if let existing = cachedAuthorizationRef {
-            authorizationRef = existing
-        } else {
-            var createdAuthorization: AuthorizationRef?
-            let createStatus = AuthorizationCreate(nil, nil, defaultFlags, &createdAuthorization)
-            guard createStatus == errAuthorizationSuccess, let createdAuthorization else {
-                throw FanControlError.authorizationFailed(createStatus)
-            }
-            cachedAuthorizationRef = createdAuthorization
-            authorizationRef = createdAuthorization
-        }
-
-        let status = kAuthorizationRightExecute.withCString { rightName in
-            var executeRight = AuthorizationItem(name: rightName, valueLength: 0, value: nil, flags: 0)
-            return withUnsafeMutablePointer(to: &executeRight) { executeRightPointer in
-                var rights = AuthorizationRights(count: 1, items: executeRightPointer)
-                return AuthorizationCopyRights(authorizationRef, &rights, nil, interactionAllowedFlags, nil)
-            }
-        }
-        guard status == errAuthorizationSuccess else {
-            throw FanControlError.authorizationFailed(status)
-        }
-
-        return authorizationRef
-    }
-
-    private func launchHelper(arguments helperArguments: [String], authorizationRef: AuthorizationRef, resultURL: URL) throws -> OSStatus {
-        guard let helperURL = Bundle.main.url(forResource: "TaskManagerProFanHelper", withExtension: nil) else {
+    private func ensureInstalledPrivilegedHelper() throws {
+        guard let bundledHelperURL = Bundle.main.url(forResource: "TaskManagerProFanHelper", withExtension: nil) else {
             throw FanControlError.helperMissing
         }
 
-        guard let toolCString = strdup(helperURL.path) else {
-            throw FanControlError.executionFailed("Task Manager Pro could not prepare the helper path.")
+        if FileManager.default.isExecutableFile(atPath: installedHelperURL.path) {
+            return
         }
-        defer { free(toolCString) }
 
-        let arguments = [resultURL.path] + helperArguments
-        let cStrings = try arguments.map { argument -> UnsafeMutablePointer<CChar> in
-            guard let duplicate = strdup(argument) else {
-                throw FanControlError.executionFailed("Task Manager Pro could not prepare the helper arguments.")
+        let installDirectory = installedHelperURL.deletingLastPathComponent().path
+        let escapedSource = shellSingleQuoted(bundledHelperURL.path)
+        let escapedDestination = shellSingleQuoted(installedHelperURL.path)
+        let escapedDirectory = shellSingleQuoted(installDirectory)
+        let command = "mkdir -p \(escapedDirectory) && /usr/bin/install -m 4555 -o root -g wheel \(escapedSource) \(escapedDestination)"
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", "do shell script \(applescriptQuoted(command)) with administrator privileges"]
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = outputPipe
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let output = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            if output.localizedCaseInsensitiveContains("User canceled") {
+                throw FanControlError.installCanceled
             }
-            return duplicate
+            throw FanControlError.installFailed(output.trimmingCharacters(in: .whitespacesAndNewlines))
         }
-        defer { cStrings.forEach { free($0) } }
 
-        var mutableArguments = cStrings.map(Optional.some)
-        mutableArguments.append(nil)
-        return mutableArguments.withUnsafeMutableBufferPointer { buffer in
-            PulseAuthorizationExecuteWithPrivileges(authorizationRef, toolCString, buffer.baseAddress)
+        guard FileManager.default.isExecutableFile(atPath: installedHelperURL.path) else {
+            throw FanControlError.installFailed("Task Manager Pro could not verify the installed fan control helper.")
         }
+    }
+
+    private func launchInstalledHelper(arguments helperArguments: [String], resultURL: URL) throws {
+        let process = Process()
+        process.executableURL = installedHelperURL
+        process.arguments = [resultURL.path] + helperArguments
+        try process.run()
     }
 
     private func waitForResult(at url: URL) throws -> (success: Bool, message: String) {
@@ -125,21 +91,29 @@ private struct FanControlHelperResult: Decodable {
 }
 
 private enum FanControlError: LocalizedError {
-    case authorizationFailed(OSStatus)
     case helperMissing
+    case installCanceled
+    case installFailed(String)
     case executionFailed(String)
 
     var errorDescription: String? {
         switch self {
-        case let .authorizationFailed(status):
-            if status == errAuthorizationCanceled {
-                return "Fan control was canceled."
-            }
-            return "Fan control authorization failed. (Status \(status))"
         case .helperMissing:
             return "Task Manager Pro could not find its bundled fan control helper."
+        case .installCanceled:
+            return "Fan control setup was canceled."
+        case let .installFailed(message):
+            return message.isEmpty ? "Task Manager Pro could not install its privileged fan control helper." : "Task Manager Pro could not install its privileged fan control helper. \(message)"
         case let .executionFailed(message):
             return message
         }
     }
+}
+
+private func shellSingleQuoted(_ value: String) -> String {
+    "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
+}
+
+private func applescriptQuoted(_ value: String) -> String {
+    "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
 }
