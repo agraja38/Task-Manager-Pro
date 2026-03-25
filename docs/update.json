@@ -1,7 +1,7 @@
 {
-  "version": "1.0.69",
-  "build": 169,
-  "notes": "Keep menu bar telemetry updating while menus are open and add more breathing room for the fan controller item.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.69/TaskManagerPro-1.0.69-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.69/TaskManagerPro-1.0.69-intel.dmg"
+  "version": "1.0.70",
+  "build": 170,
+  "notes": "Improve fan control so stopped fans can be kicked up from 0 RPM before settling at the requested speed.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.70/TaskManagerPro-1.0.70-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.70/TaskManagerPro-1.0.70-intel.dmg"
 }

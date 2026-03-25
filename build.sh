@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="TaskManagerPro"
 DISPLAY_NAME="Task Manager Pro"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="1.0.69"
-BUILD_NUMBER="169"
+VERSION="1.0.70"
+BUILD_NUMBER="170"
 HELPER_NAME="TaskManagerProFanHelper"
 BUILD_DIR="$(mktemp -d /tmp/taskmanagerpro-build.XXXXXX)"
 cleanup() {
@@ -109,11 +109,11 @@ xattr -d com.apple.FinderInfo "$HOST_APP" 2>/dev/null || true
 
 cat > "$ROOT_DIR/docs/update.json" <<'JSON'
 {
-  "version": "1.0.69",
-  "build": 169,
-  "notes": "Keep menu bar telemetry updating while menus are open and add more breathing room for the fan controller item.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.69/TaskManagerPro-1.0.69-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.69/TaskManagerPro-1.0.69-intel.dmg"
+  "version": "1.0.70",
+  "build": 170,
+  "notes": "Improve fan control so stopped fans can be kicked up from 0 RPM before settling at the requested speed.",
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.70/TaskManagerPro-1.0.70-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.70/TaskManagerPro-1.0.70-intel.dmg"
 }
 JSON
 

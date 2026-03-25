@@ -148,7 +148,12 @@ private final class FanControllerSMC {
         for (index, requestedRPM) in targets.sorted(by: { $0.key < $1.key }) {
             let boundedRPM = try clampedRPM(requestedRPM, fanIndex: index)
             try enableManualModeIfAvailable(fanIndex: index)
-            try writeTargetSpeed(boundedRPM, fanIndex: index)
+            let currentRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(index)Ac"))) ?? 0)
+            if currentRPM == 0 && boundedRPM > 0 {
+                try kickStartFan(to: boundedRPM, fanIndex: index)
+            } else {
+                try writeTargetSpeed(boundedRPM, fanIndex: index)
+            }
         }
     }
 
@@ -311,6 +316,14 @@ private final class FanControllerSMC {
         }
 
         try writeNumericValue(rpm, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
+    }
+
+    private func kickStartFan(to rpm: Int, fanIndex: Int) throws {
+        let maxRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mx"))) ?? Double(rpm))
+        let kickRPM = min(maxRPM, max(rpm, 2500, Int(Double(maxRPM) * 0.65)))
+        try writeTargetSpeed(kickRPM, fanIndex: fanIndex)
+        Thread.sleep(forTimeInterval: 0.35)
+        try writeTargetSpeed(rpm, fanIndex: fanIndex)
     }
 
     private func enableManualModeIfAvailable(fanIndex: Int) throws {
