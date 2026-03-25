@@ -148,9 +148,9 @@ private final class FanControllerSMC {
         for (index, requestedRPM) in targets.sorted(by: { $0.key < $1.key }) {
             let boundedRPM = try clampedRPM(requestedRPM, fanIndex: index)
             try enableManualModeIfAvailable(fanIndex: index)
-            let currentRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(index)Ac"))) ?? 0)
+            let currentRPM = actualRPM(for: index)
             if currentRPM == 0 && boundedRPM > 0 {
-                try kickStartFan(to: boundedRPM, fanIndex: index)
+                try forceSpinUpStoppedFan(to: boundedRPM, fanIndex: index)
             } else {
                 try writeTargetSpeed(boundedRPM, fanIndex: index)
             }
@@ -318,12 +318,27 @@ private final class FanControllerSMC {
         try writeNumericValue(rpm, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
     }
 
-    private func kickStartFan(to rpm: Int, fanIndex: Int) throws {
+    private func forceSpinUpStoppedFan(to rpm: Int, fanIndex: Int) throws {
         let maxRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mx"))) ?? Double(rpm))
-        let kickRPM = min(maxRPM, max(rpm, 2500, Int(Double(maxRPM) * 0.65)))
-        try writeTargetSpeed(kickRPM, fanIndex: fanIndex)
-        Thread.sleep(forTimeInterval: 0.35)
+        let spinUpRPM = max(rpm, maxRPM)
+
+        try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
+        try? writeNumericValue(spinUpRPM, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
+
+        let deadline = Date().addingTimeInterval(1.4)
+        while Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.12)
+            if actualRPM(for: fanIndex) > 0 {
+                break
+            }
+            try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
+        }
+
         try writeTargetSpeed(rpm, fanIndex: fanIndex)
+    }
+
+    private func actualRPM(for fanIndex: Int) -> Int {
+        Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Ac"))) ?? 0)
     }
 
     private func enableManualModeIfAvailable(fanIndex: Int) throws {
