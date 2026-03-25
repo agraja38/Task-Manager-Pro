@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var fanAnimationTimer: Timer?
     private var fanAnimationFrameIndex = 0
     private lazy var fanAnimationFrames: [NSImage] = Self.makeFanAnimationFrames()
-    private lazy var fanIdleImage: NSImage? = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller")
+    private lazy var fanIdleImage: NSImage? = Self.makeTemplateFanBaseImage()
     private var latestCPUPercent = 0.0
     private var latestMemoryPercent = 0.0
     private weak var mainWindow: NSWindow?
@@ -429,10 +429,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func renderFanAnimationFrame() {
         let image = currentFanAnimationImage()
         if AppState.shared.fanMenuDisplayMode == .singleLine {
-            fanStatusItem?.button?.image = image
+            fanStatusItem?.button?.image = image?.asTemplateImage()
             fanStatusItem?.button?.imagePosition = .imageLeading
         } else {
-            fanStatusIconView?.image = image
+            fanStatusIconView?.image = image?.asTemplateImage()
         }
     }
 
@@ -449,13 +449,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private static func makeFanAnimationFrames() -> [NSImage] {
-        guard let baseImage = NSImage(systemSymbolName: "fan.fill", accessibilityDescription: "Fan Controller") else {
+        guard let baseImage = makeTemplateFanBaseImage() else {
             return []
         }
 
         return stride(from: 0.0, to: Double.pi * 2, by: Double.pi / 4).compactMap { angle in
-            baseImage.rotated(by: angle)
+            baseImage.rotated(by: angle)?.asTemplateImage()
         }
+    }
+
+    private static func makeTemplateFanBaseImage() -> NSImage? {
+        let configuration = NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        let image = NSImage(
+            systemSymbolName: "fan.fill",
+            accessibilityDescription: "Fan Controller"
+        )?.withSymbolConfiguration(configuration)
+        image?.isTemplate = true
+        return image
     }
 
     private func rebuildStatusMenu() {
@@ -539,6 +549,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 }
 
 private extension NSImage {
+    func asTemplateImage() -> NSImage {
+        let copy = self.copy() as? NSImage ?? self
+        copy.isTemplate = true
+        return copy
+    }
+
     func rotated(by radians: Double) -> NSImage? {
         let result = NSImage(size: size)
         result.lockFocus()
