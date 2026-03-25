@@ -175,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let temperatureText = tempDisplay.value.map { String(format: "%.0f°C", $0) } ?? "--"
         let rpmText = "\(fan.rpm) rpm"
         let displayMode = AppState.shared.fanMenuDisplayMode
+        let isSpinning = fan.rpm > 0
 
         if displayMode == .singleLine {
             removeFanStatusView()
@@ -195,7 +196,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             installFanStatusView(in: button, rpmText: rpmText, temperatureText: temperatureText, displayMode: displayMode)
         }
 
-        if fan.rpm > 0 {
+        let tintColor = isSpinning ? NSColor.systemBlue : NSColor.labelColor
+        button.contentTintColor = tintColor
+        fanStatusIconView?.contentTintColor = tintColor
+
+        if isSpinning {
             startFanAnimation()
         } else {
             stopFanAnimation()
