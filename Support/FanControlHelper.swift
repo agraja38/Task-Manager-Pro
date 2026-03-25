@@ -150,14 +150,7 @@ private final class FanControllerSMC {
         try ensureOpen()
         for (index, requestedRPM) in targets.sorted(by: { $0.key < $1.key }) {
             let boundedRPM = try clampedRPM(requestedRPM, fanIndex: index)
-            try enableManualModeIfAvailable(fanIndex: index)
-            Thread.sleep(forTimeInterval: 0.1)
-            let currentRPM = actualRPM(for: index)
-            if currentRPM == 0 && boundedRPM > 0 {
-                try forceSpinUpStoppedFan(to: boundedRPM, fanIndex: index)
-            } else {
-                try writeTargetSpeed(boundedRPM, fanIndex: index)
-            }
+            try applyTargetSpeed(boundedRPM, fanIndex: index)
         }
     }
 
@@ -322,29 +315,60 @@ private final class FanControllerSMC {
         try writeNumericValue(rpm, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
     }
 
-    private func forceSpinUpStoppedFan(to rpm: Int, fanIndex: Int) throws {
+    private func applyTargetSpeed(_ rpm: Int, fanIndex: Int) throws {
+        try engageManualControl(fanIndex: fanIndex, resetFirst: true)
+        Thread.sleep(forTimeInterval: 0.08)
+
+        if actualRPM(for: fanIndex) == 0 && rpm > 0 {
+            try wakeParkedFan(to: rpm, fanIndex: fanIndex)
+        } else {
+            try commitSpeed(rpm, fanIndex: fanIndex)
+        }
+    }
+
+    private func wakeParkedFan(to rpm: Int, fanIndex: Int) throws {
         let maxRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mx"))) ?? Double(rpm))
-        let spinUpRPM = max(rpm, maxRPM)
+        let safeRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Sf"))) ?? Double(rpm))
+        let minRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mn"))) ?? Double(rpm))
+        let desiredRPM = max(rpm, minRPM)
+        let boostRPM = max(desiredRPM, safeRPM, Int(Double(maxRPM) * 0.92))
 
-        try disableManualModeIfAvailable(fanIndex: fanIndex)
-        Thread.sleep(forTimeInterval: 0.1)
-        try enableManualModeIfAvailable(fanIndex: fanIndex)
-        Thread.sleep(forTimeInterval: 0.1)
-        try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
-        try? writeNumericValue(spinUpRPM, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
+        for attempt in 0..<3 {
+            try engageManualControl(fanIndex: fanIndex, resetFirst: true)
+            try commitSpeed(boostRPM, fanIndex: fanIndex)
 
-        let deadline = Date().addingTimeInterval(2.5)
-        while Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.12)
-            if actualRPM(for: fanIndex) > 0 {
-                try writeTargetSpeed(rpm, fanIndex: fanIndex)
-                return
+            let startDeadline = Date().addingTimeInterval(1.2)
+            while Date() < startDeadline {
+                Thread.sleep(forTimeInterval: 0.08)
+                if actualRPM(for: fanIndex) > 0 {
+                    try commitSpeed(desiredRPM, fanIndex: fanIndex)
+                    return
+                }
+                try commitSpeed(boostRPM, fanIndex: fanIndex)
             }
-            try writeTargetSpeed(spinUpRPM, fanIndex: fanIndex)
-            try enableManualModeIfAvailable(fanIndex: fanIndex)
+
+            if attempt < 2 {
+                try disableManualModeIfAvailable(fanIndex: fanIndex)
+                Thread.sleep(forTimeInterval: 0.15)
+            }
         }
 
         throw HelperError.fanDidNotSpinUp(fanIndex)
+    }
+
+    private func commitSpeed(_ rpm: Int, fanIndex: Int) throws {
+        try writeTargetSpeed(rpm, fanIndex: fanIndex)
+        if maybeKeyInfo(for: FourCharCode(fromString: "F\(fanIndex)Mn")) != nil {
+            try writeNumericValue(rpm, to: FourCharCode(fromString: "F\(fanIndex)Mn"))
+        }
+    }
+
+    private func engageManualControl(fanIndex: Int, resetFirst: Bool) throws {
+        if resetFirst {
+            try disableManualModeIfAvailable(fanIndex: fanIndex)
+            Thread.sleep(forTimeInterval: 0.06)
+        }
+        try enableManualModeIfAvailable(fanIndex: fanIndex)
     }
 
     private func actualRPM(for fanIndex: Int) -> Int {

@@ -33,7 +33,7 @@ final class FanControlService {
             throw FanControlError.helperMissing
         }
 
-        if FileManager.default.isExecutableFile(atPath: installedHelperURL.path) {
+        if installedHelperMatchesBundledVersion(bundledHelperURL: bundledHelperURL) {
             return
         }
 
@@ -63,6 +63,18 @@ final class FanControlService {
         guard FileManager.default.isExecutableFile(atPath: installedHelperURL.path) else {
             throw FanControlError.installFailed("Task Manager Pro could not verify the installed fan control helper.")
         }
+    }
+
+    private func installedHelperMatchesBundledVersion(bundledHelperURL: URL) -> Bool {
+        guard
+            FileManager.default.isExecutableFile(atPath: installedHelperURL.path),
+            let bundledData = try? Data(contentsOf: bundledHelperURL),
+            let installedData = try? Data(contentsOf: installedHelperURL)
+        else {
+            return false
+        }
+
+        return bundledData == installedData
     }
 
     private func launchInstalledHelper(arguments helperArguments: [String], resultURL: URL) throws {
