@@ -1,7 +1,7 @@
 {
-  "version": "1.0.80",
-  "build": 180,
+  "version": "1.0.81",
+  "build": 181,
   "notes": "Fix the update feed so the app correctly sees the latest release, and keep the single-line fan menu bar icon rendered in white.",
-  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.80/TaskManagerPro-1.0.80-apple-silicon.dmg",
-  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.80/TaskManagerPro-1.0.80-intel.dmg"
+  "arm64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.81/TaskManagerPro-1.0.81-apple-silicon.dmg",
+  "x86_64AssetURL": "https://github.com/agraja38/Task-Manager-Pro/releases/download/v1.0.81/TaskManagerPro-1.0.81-intel.dmg"
 }

@@ -148,9 +148,22 @@ private final class FanControllerSMC {
 
     func applyTargets(_ targets: [Int: Int]) throws {
         try ensureOpen()
+        var normalizedTargets: [Int: Int] = [:]
         for (index, requestedRPM) in targets.sorted(by: { $0.key < $1.key }) {
-            let boundedRPM = try clampedRPM(requestedRPM, fanIndex: index)
-            try applyTargetSpeed(boundedRPM, fanIndex: index)
+            normalizedTargets[index] = try clampedRPM(requestedRPM, fanIndex: index)
+        }
+
+        let hasParkedTarget = normalizedTargets.contains { index, rpm in
+            rpm > 0 && actualRPM(for: index) == 0
+        }
+
+        if hasParkedTarget {
+            try wakeFansGloballyAndApplyTargets(normalizedTargets)
+            return
+        }
+
+        for (index, requestedRPM) in normalizedTargets.sorted(by: { $0.key < $1.key }) {
+            try applyTargetSpeed(requestedRPM, fanIndex: index)
         }
     }
 
@@ -326,6 +339,53 @@ private final class FanControllerSMC {
         }
     }
 
+    private func wakeFansGloballyAndApplyTargets(_ targets: [Int: Int]) throws {
+        let availableFanIndices = detectedFanIndices()
+        let allTargets = Dictionary(uniqueKeysWithValues: availableFanIndices.map { index in
+            let requested = targets[index] ?? Int((try? readNumericValue(for: FourCharCode(fromString: "F\(index)Sf"))) ?? 0)
+            let bounded = (try? clampedRPM(requested, fanIndex: index)) ?? requested
+            return (index, bounded)
+        })
+
+        let boostTargets = Dictionary(uniqueKeysWithValues: availableFanIndices.map { index in
+            let maxRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(index)Mx"))) ?? Double(allTargets[index] ?? 0))
+            return (index, maxRPM)
+        })
+
+        for index in availableFanIndices {
+            try disableManualModeIfAvailable(fanIndex: index)
+        }
+        Thread.sleep(forTimeInterval: 0.12)
+        for index in availableFanIndices {
+            try enableManualModeIfAvailable(fanIndex: index)
+        }
+        Thread.sleep(forTimeInterval: 0.08)
+
+        let deadline = Date().addingTimeInterval(2.8)
+        while Date() < deadline {
+            for (index, rpm) in boostTargets.sorted(by: { $0.key < $1.key }) {
+                try commitSpeed(rpm, fanIndex: index)
+            }
+
+            Thread.sleep(forTimeInterval: 0.10)
+
+            let allParkedTargetsStarted = targets.allSatisfy { index, rpm in
+                rpm <= 0 || actualRPM(for: index) > 0
+            }
+
+            if allParkedTargetsStarted {
+                for (index, rpm) in allTargets.sorted(by: { $0.key < $1.key }) {
+                    try commitSpeed(rpm, fanIndex: index)
+                }
+                return
+            }
+        }
+
+        if let failedIndex = targets.first(where: { $0.value > 0 && actualRPM(for: $0.key) == 0 })?.key {
+            throw HelperError.fanDidNotSpinUp(failedIndex)
+        }
+    }
+
     private func wakeParkedFan(to rpm: Int, fanIndex: Int) throws {
         let maxRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Mx"))) ?? Double(rpm))
         let safeRPM = Int((try? readNumericValue(for: FourCharCode(fromString: "F\(fanIndex)Sf"))) ?? Double(rpm))
@@ -412,6 +472,15 @@ private final class FanControllerSMC {
         let lowerBound = max(minimum, 0)
         let upperBound = max(maximum, safe, lowerBound)
         return max(lowerBound, min(requested, upperBound))
+    }
+
+    private func detectedFanIndices() -> [Int] {
+        let explicitCount = Int((try? readNumericValue(for: FourCharCode(fromStaticString: "FNum"))) ?? 0)
+        if explicitCount > 0 {
+            return Array(0..<explicitCount)
+        }
+
+        return (0..<6).filter { maybeKeyInfo(for: FourCharCode(fromString: "F\($0)Ac")) != nil }
     }
 }
 
