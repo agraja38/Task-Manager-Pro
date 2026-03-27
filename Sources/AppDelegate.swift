@@ -216,6 +216,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func checkForUpdates() {
+        AppState.shared.selectedSection = .settings
         Task { await AppState.shared.updater.checkForUpdates() }
         openMainWindow()
     }
