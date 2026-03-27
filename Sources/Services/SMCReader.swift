@@ -159,10 +159,10 @@ final class SMCReader {
     }
 
     private static let cpuPriorityKeys = [
-        "TCMA", "TC0C", "TC0F",
+        "TCMA",
         "TCMz", "Te06", "Te0T", "TCMb", "Te05", "Te0S", "TCHP",
         "TfC0", "TfC1", "TfC2", "TfC3", "TfC4",
-        "TC0P", "TC0F", "TC0D", "TC0H"
+        "TC0P", "TC0C", "TC0F", "TC0D", "TC0H"
     ]
     private static let gpuPriorityKeys = [
         "Tg0A", "TG0A", "TGAA",
@@ -214,7 +214,10 @@ final class SMCReader {
         try ensureOpen()
         let sensors = try readTemperatureSensors()
         let fans = try readFans()
-        let cpuTemperature = exactNamedTemperature(in: sensors, names: ["CPU Core Average"]) ?? preferredTemperature(in: sensors, priority: Self.cpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TC", "Tp", "Te", "Tf"])
+        let cpuTemperature = exactKeyTemperature(in: sensors, keys: ["TCMA"])
+            ?? averageTemperature(in: sensors, prefixes: ["TRD", "TPD", "TUD", "TPC"])
+            ?? preferredTemperature(in: sensors, priority: Self.cpuPriorityKeys)
+            ?? hottestMatchingTemperature(in: sensors, prefixes: ["TC", "Tp", "Te", "Tf"])
         let gpuTemperature = exactNamedTemperature(in: sensors, names: ["GPU Cluster Average"]) ?? preferredTemperature(in: sensors, priority: Self.gpuPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TG", "Tg"])
         let palmRestTemperature = preferredTemperature(in: sensors, priority: Self.palmRestPriorityKeys) ?? hottestMatchingTemperature(in: sensors, prefixes: ["TS", "Ta"])
 
@@ -270,6 +273,26 @@ final class SMCReader {
             }
         }
         return nil
+    }
+
+    private func exactKeyTemperature(in sensors: [ThermalSensorSnapshot], keys: [String]) -> Double? {
+        for key in keys {
+            if let value = sensors.first(where: { $0.key == key })?.valueC {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private func averageTemperature(in sensors: [ThermalSensorSnapshot], prefixes: [String]) -> Double? {
+        let matches = sensors
+            .filter { sensor in
+                prefixes.contains { sensor.key.hasPrefix($0) }
+            }
+            .map(\.valueC)
+
+        guard !matches.isEmpty else { return nil }
+        return matches.reduce(0, +) / Double(matches.count)
     }
 
     private func callDriver(_ inputStruct: inout SMCParamStruct, selector: SMCParamStruct.Selector = .handleYPCEvent) throws -> SMCParamStruct {
@@ -514,7 +537,7 @@ final class SMCReader {
         appendExact(["TW0P"], as: "Airport Proximity")
         appendExact(["TB1T"], as: "Battery")
         appendExact(["TB2T"], as: "Battery Gas Gauge")
-        appendExact(["TCMA", "TC0C", "TC0F"], as: "CPU Core Average")
+        appendExact(["TCMA"], as: "CPU Core Average")
         appendSeries(prefix: "TRD", namePrefix: "CPU Efficiency Core", maxCount: cpuTopology.efficiencyCores)
         appendSeries(prefix: "TPD", namePrefix: "CPU Performance Core", maxCount: cpuTopology.performanceCores)
         appendSeries(prefix: "TGC", namePrefix: "GPU Cluster")
@@ -676,7 +699,7 @@ final class SMCReader {
             "TCMA": "CPU Core Average",
             "TCMb": "CPU Memory Buffer",
             "TCHP": "CPU Performance Cluster",
-            "TC0C": "CPU Core Average",
+            "TC0C": "CPU Core Sensor",
             "TC0P": "CPU Proximity",
             "TC0F": "CPU Die",
             "TC0D": "CPU Diode",
